@@ -26,7 +26,7 @@ public class QoMC implements ModInitializer {
                 );
                 for (String s : probeIds) {
                     if (FabricLoader.getInstance().isModLoaded(s)) {
-                        ModMetadata modMetadata = FabricLoader.getInstance().getModContainer(s).orElse(null).getMetadata();
+                        ModMetadata modMetadata = FabricLoader.getInstance().getModContainer(s).get().getMetadata();
                         List<Config> configs = configGroup.computeIfAbsent(modMetadata, k -> new ArrayList<>());
                         configs.add(config);
                         break;

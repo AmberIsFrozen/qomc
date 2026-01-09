@@ -4,7 +4,6 @@ import com.lx862.qomc.Platform;
 import com.lx862.qomc.core.ValueType;
 import folk.sisby.kaleido.lib.quiltconfig.api.Config;
 import folk.sisby.kaleido.lib.quiltconfig.api.Constraint;
-import folk.sisby.kaleido.lib.quiltconfig.api.annotations.ChangeWarning;
 import folk.sisby.kaleido.lib.quiltconfig.api.annotations.Comment;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.TrackedValue;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueList;
@@ -23,23 +22,11 @@ public class McUtil {
                 .withFormatting(Formatting.GREEN)
                 .withUnderline(true));
 
-        MutableText text = Text.literal(" has been changed to ").append(McUtil.formatValue(value, valueType)).fillStyle(Style.EMPTY.withUnderline(false));
+        MutableText text = Text.literal(" has been set to ").append(McUtil.formatValue(value, valueType)).fillStyle(Style.EMPTY.withUnderline(false));
         return keyName.append(text);
     }
 
-    public static MutableText fieldDetail(TrackedValue<?> trackedValue) {
-        MutableText finalText = currentValue(trackedValue);
-
-        if(trackedValue.hasMetadata(ChangeWarning.TYPE)) {
-            finalText
-                    .append("\n")
-                    .append(changeWarning(trackedValue.metadata(ChangeWarning.TYPE)));
-        }
-
-        return finalText;
-    }
-
-    public static MutableText nodeBreadcrumb(Config config, ValueTreeNode node) {
+    public static MutableText configNodeBreadcrumb(Config config, ValueTreeNode node) {
         MutableText fieldHeader = Text.empty();
 
         for(int i = 0; i < node.key().length(); i++) {
@@ -54,7 +41,7 @@ public class McUtil {
             }
 
             if(i != node.key().length()-1) { // Add hover text
-                nodeText.styled(s -> s.withHoverEvent(Platform.hoverEventText(tooltip(breadcrumbNode))));
+                nodeText.styled(s -> s.withHoverEvent(Platform.hoverEventText(configNodeTooltip(breadcrumbNode))));
             }
 
             fieldHeader.append(nodeText);
@@ -66,7 +53,7 @@ public class McUtil {
         return fieldHeader;
     }
 
-    public static MutableText nodeComments(ValueTreeNode node) {
+    public static MutableText configNodeComments(ValueTreeNode node) {
         MutableText text = Text.empty().fillStyle(Style.EMPTY.withColor(Formatting.GRAY).withBold(false));
         if(node.hasMetadata(Comment.TYPE)) {
             boolean prependNewLine = false;
@@ -78,18 +65,18 @@ public class McUtil {
         return text;
     }
 
-    public static MutableText tooltip(ValueTreeNode node) {
+    public static MutableText configNodeTooltip(ValueTreeNode node) {
         if(node instanceof ValueTreeNode.Section) {
-            return Text.literal(QconfUtil.getDisplayOrDefaultName(node)).formatted(Formatting.GREEN).append("\n").append(nodeComments(node));
+            return Text.literal(QconfUtil.getDisplayOrDefaultName(node)).formatted(Formatting.GREEN).append("\n").append(configNodeComments(node));
         } else {
-            return Text.literal(QconfUtil.getDisplayOrDefaultName(node)).formatted(Formatting.WHITE).formatted(Formatting.BOLD).append("\n").append(nodeComments(node));
+            return Text.literal(QconfUtil.getDisplayOrDefaultName(node)).formatted(Formatting.WHITE).formatted(Formatting.BOLD).append("\n").append(configNodeComments(node));
         }
     }
 
     public static MutableText valueOverview(TrackedValue<?> trackedValue) {
         MutableText text = Text.literal("- ").fillStyle(Style.EMPTY.withColor(Formatting.YELLOW));
         MutableText valueName = Text.literal(trackedValue.key().getLastComponent()).fillStyle(Style.EMPTY.withColor(Formatting.WHITE).withBold(false));
-        valueName.styled(s -> s.withHoverEvent(Platform.hoverEventText(tooltip(trackedValue))));
+        valueName.styled(s -> s.withHoverEvent(Platform.hoverEventText(configNodeTooltip(trackedValue))));
 
         MutableText t3 = Text.literal(": ").fillStyle(Style.EMPTY.withColor(Formatting.WHITE).withBold(false));
         MutableText t4 = formatValue(trackedValue, ValueType.fromValue(trackedValue)).fillStyle(Style.EMPTY.withUnderline(true).withBold(false));
@@ -117,7 +104,7 @@ public class McUtil {
         return finalText;
     }
 
-    private static MutableText currentValue(TrackedValue<?> trackedValue) {
+    public static MutableText currentValue(TrackedValue<?> trackedValue) {
         boolean valueIsDefault = Objects.equals(trackedValue.value(), trackedValue.getDefaultValue());
         MutableText headerText = Text.literal("Current Value: ");
         MutableText valueText = formatValue(trackedValue, ValueType.fromValue(trackedValue)).styled(s -> s.withUnderline(true));
@@ -134,7 +121,7 @@ public class McUtil {
         return headerText.append(valueText).append(defaultText);
     }
 
-    private static MutableText changeWarning(folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning changeWarning) {
+    public static MutableText configNodeChangeWarning(folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning changeWarning) {
         MutableText headerText = Text.literal("Note: ").fillStyle(Style.EMPTY.withColor(Formatting.YELLOW).withBold(true));
 
         MutableText warningText =

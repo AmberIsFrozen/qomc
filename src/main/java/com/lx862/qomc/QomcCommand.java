@@ -15,6 +15,7 @@ import com.mojang.brigadier.context.CommandContext;
 import com.mojang.brigadier.context.ParsedCommandNode;
 import folk.sisby.kaleido.lib.quiltconfig.api.Config;
 import folk.sisby.kaleido.lib.quiltconfig.api.Constraint;
+import folk.sisby.kaleido.lib.quiltconfig.api.annotations.ChangeWarning;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.TrackedValue;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueKey;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueList;
@@ -75,8 +76,14 @@ public class QomcCommand {
         sectionNode.executes(ctx -> {
             ValueTreeNode sectionConfigNode = config.getNode(sectionKey);
 
-            Platform.sendFeedback(ctx.getSource(), () -> McUtil.nodeBreadcrumb(config, sectionConfigNode), false);
-            Platform.sendFeedback(ctx.getSource(), () -> McUtil.nodeComments(sectionConfigNode), false);
+            Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeBreadcrumb(config, sectionConfigNode), false);
+            Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeComments(sectionConfigNode), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Text.empty(), false);
+
+            if(sectionConfigNode.hasMetadata(ChangeWarning.TYPE)) {
+                Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeChangeWarning(sectionConfigNode.metadata(ChangeWarning.TYPE)), false);
+                Platform.sendFeedback(ctx.getSource(), () -> Text.empty(), false);
+            }
 
             for(TrackedValue<?> value : configSection.fields()) {
                 Platform.sendFeedback(ctx.getSource(), () -> McUtil.valueOverview(value), false);
@@ -97,15 +104,20 @@ public class QomcCommand {
     }
 
 
-    public static <T> LiteralArgumentBuilder<ServerCommandSource> buildTrackedValueNode(Config config, TrackedValue<T> value) {
-        LiteralArgumentBuilder<ServerCommandSource> fieldNode = CommandManager.literal(value.key().getLastComponent());
+    public static <T> LiteralArgumentBuilder<ServerCommandSource> buildTrackedValueNode(Config config, TrackedValue<T> trackedValue) {
+        LiteralArgumentBuilder<ServerCommandSource> fieldNode = CommandManager.literal(trackedValue.key().getLastComponent());
         fieldNode.executes(ctx -> {
-            Platform.sendFeedback(ctx.getSource(), () -> McUtil.nodeBreadcrumb(config, value), false);
-            Platform.sendFeedback(ctx.getSource(), () -> McUtil.nodeComments(value), false);
+            Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeBreadcrumb(config, trackedValue), false);
+            Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeComments(trackedValue), false);
 
             Platform.sendFeedback(ctx.getSource(), () -> Text.empty(), false);
-            Platform.sendFeedback(ctx.getSource(), () -> McUtil.fieldDetail(value), false);
+            Platform.sendFeedback(ctx.getSource(), () -> McUtil.currentValue(trackedValue), false);
             Platform.sendFeedback(ctx.getSource(), () -> Text.empty(), false);
+
+            if(trackedValue.hasMetadata(ChangeWarning.TYPE)) {
+                Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeChangeWarning(trackedValue.metadata(ChangeWarning.TYPE)), false);
+                Platform.sendFeedback(ctx.getSource(), () -> Text.empty(), false);
+            }
 
             String suggestedCommand = "/";
             for(ParsedCommandNode<ServerCommandSource> node : ctx.getNodes()) {
@@ -116,38 +128,26 @@ public class QomcCommand {
                     Style.EMPTY
                             .withColor(Formatting.GOLD)
                             .withUnderline(true)
-                            .withHoverEvent(Platform.hoverEventText(McUtil.valueType(value)))
+                            .withHoverEvent(Platform.hoverEventText(McUtil.valueType(trackedValue)))
                             .withClickEvent(Platform.clickEventSuggestCommand(suggestedCommand)));
-
-            // Too much to show
-//            if(!Objects.equals(value.value(), value.getDefaultValue())) {
-//                MutableText resetText = Text.literal("[↶ Reset to default]").fillStyle(
-//                        Style.EMPTY
-//                                .withColor(Formatting.GREEN)
-//                                .withUnderline(true)
-//                                .withHoverEvent(Platform.hoverEventText(Text.literal("Default: " + QconfUtil.stringify(value.getDefaultValue())).formatted(Formatting.WHITE)))
-//                                .withClickEvent(Platform.clickEventSuggestCommand(suggestedCommand + "{default}"))
-//                );
-//                fieldDetailText.append(" ").append(resetText);
-//            }
 
             Platform.sendFeedback(ctx.getSource(), () -> changeText, false);
             return 1;
         });
 
-        ValueType valueType = ValueType.fromValue(value);
-        List<ArgumentBuilder<ServerCommandSource, ?>> valueNodes = buildValueNode(value, valueType, (ctx, newValue) -> {
+        ValueType valueType = ValueType.fromValue(trackedValue);
+        List<ArgumentBuilder<ServerCommandSource, ?>> valueNodes = buildValueNode(trackedValue, valueType, (ctx, newValue) -> {
             if(valueType == ValueType.BOOLEAN || valueType == ValueType.STRING || valueType == ValueType.INTEGER || valueType == ValueType.LONG || valueType == ValueType.FLOAT || valueType == ValueType.DOUBLE) {
-                return configSetValue(ctx, value, valueType, newValue);
+                return configSetValue(ctx, trackedValue, valueType, newValue);
             }
             if(valueType == ValueType.COLOR_RGB) {
-                return configSetColorHex(ctx, (TrackedValue<String>) value, (String)newValue, false);
+                return configSetColorHex(ctx, (TrackedValue<String>) trackedValue, (String)newValue, false);
             }
             if(valueType == ValueType.COLOR_ARGB) {
-                return configSetColorHex(ctx, (TrackedValue<String>) value, (String)newValue, true);
+                return configSetColorHex(ctx, (TrackedValue<String>) trackedValue, (String)newValue, true);
             }
             if(valueType == ValueType.ENUM) {
-                return configSetEnum(ctx, (TrackedValue<Enum<?>>)value, (String)newValue);
+                return configSetEnum(ctx, (TrackedValue<Enum<?>>)trackedValue, (String)newValue);
             }
             return 0;
         });
@@ -158,7 +158,7 @@ public class QomcCommand {
 
         fieldNode.then(
             CommandManager.literal("{default}")
-                .executes(ctx -> configSetValue(ctx, value, valueType, value.getDefaultValue()))
+                .executes(ctx -> configSetValue(ctx, trackedValue, valueType, trackedValue.getDefaultValue()))
         );
 
         return fieldNode;
@@ -176,7 +176,7 @@ public class QomcCommand {
                     .executes(ctx -> callback.apply(ctx, (T)(Boolean)BoolArgumentType.getBool(ctx, "boolean"))));
         }
         if(valueType == ValueType.STRING) {
-            arguments.add(CommandManager.argument("string", StringArgumentType.string())
+            arguments.add(CommandManager.argument("string", StringArgumentType.greedyString())
                     .executes(ctx -> callback.apply(ctx, (T)StringArgumentType.getString(ctx, "string"))));
         }
         if(valueType == ValueType.COLOR_RGB) {
@@ -226,13 +226,13 @@ public class QomcCommand {
             LiteralArgumentBuilder<ServerCommandSource> removeNode = CommandManager.literal("remove");
 
             for(ArgumentBuilder<ServerCommandSource, ?> listNode : buildValueNode(value, listContentValueType, (ctx, newValue) -> {
-                return configAddList(ctx, listTrackedValue, valueType, newValue);
+                return configAddList(ctx, listTrackedValue, newValue);
             })) {
                 addNode.then(listNode);
             }
 
             for(ArgumentBuilder<ServerCommandSource, ?> listNode : buildValueNode(value, listContentValueType, (ctx, newValue) -> {
-                return configRemoveList(ctx, listTrackedValue, valueType, newValue);
+                return configRemoveList(ctx, listTrackedValue, newValue);
             })) {
                 if(listNode instanceof RequiredArgumentBuilder<?, ?> requiredArgumentBuilder) {
                     requiredArgumentBuilder.suggests((commandContext, suggestionsBuilder) -> {
@@ -256,9 +256,10 @@ public class QomcCommand {
         return arguments;
     }
 
-    private static <T> int configSetValue(CommandContext<ServerCommandSource> ctx, TrackedValue<T> value, ValueType valueType, T newValue) {
-        testConstraints(value, newValue);
-        return setValue(ctx, value, newValue, valueType);
+    private static <T> int configSetValue(CommandContext<ServerCommandSource> ctx, TrackedValue<T> trackedValue, ValueType valueType, T newValue) {
+        setValue(trackedValue, newValue);
+        Platform.sendFeedback(ctx.getSource(), () -> McUtil.configFeedback(trackedValue, valueType), false);
+        return 1;
     }
 
     private static int configSetColorHex(CommandContext<ServerCommandSource> ctx, TrackedValue<String> trackedValue, String input, boolean isARGB) {
@@ -274,26 +275,32 @@ public class QomcCommand {
         return configSetValue(ctx, value, ValueType.ENUM, Enum.valueOf(value.getDefaultValue().getClass(), enumName));
     }
 
-    private static <T> int configAddList(CommandContext<ServerCommandSource> ctx, TrackedValue<ValueList<T>> value, ValueType valueType, T item) {
+    private static <T> int configAddList(CommandContext<ServerCommandSource> ctx, TrackedValue<ValueList<T>> value, T item) {
         ValueList<T> newList = (ValueList<T>) value.value().copy();
         newList.add(item);
         testConstraints(value, newList);
-        return setValue(ctx, value, newList, valueType);
+        setValue(value, newList);
+        Platform.sendFeedback(ctx.getSource(), () -> Text.literal("Added " + QconfUtil.stringify(item) + " to list " + QconfUtil.getDisplayOrDefaultName(value) + ".").formatted(Formatting.GREEN), false);
+        Platform.sendFeedback(ctx.getSource(), () -> Text.literal("New list: ").formatted(Formatting.GREEN).append(McUtil.formatValue(value, ValueType.LIST)), false);
+        return 1;
     }
 
-    private static <T> int configRemoveList(CommandContext<ServerCommandSource> ctx, TrackedValue<ValueList<T>> value, ValueType valueType, T item) {
+    private static <T> int configRemoveList(CommandContext<ServerCommandSource> ctx, TrackedValue<ValueList<T>> value, T item) {
         if(!value.value().contains(item)) {
             Platform.sendFeedback(ctx.getSource(), () -> Text.literal("Value \"" + item + "\" is not in list " + QconfUtil.getDisplayOrDefaultName(value)).formatted(Formatting.RED), false);
             return 0;
         }
 
         value.value().remove(item);
-        return setValue(ctx, value, value.value(), valueType);
+        Platform.sendFeedback(ctx.getSource(), () -> Text.literal("Removed " + QconfUtil.stringify(item) + " from list " + QconfUtil.getDisplayOrDefaultName(value) + ".").formatted(Formatting.GREEN), false);
+        Platform.sendFeedback(ctx.getSource(), () -> Text.literal("New list: ").formatted(Formatting.GREEN).append(McUtil.formatValue(value, ValueType.LIST)), false);
+        setValue(value, value.value());
+        return 1;
     }
 
     private static <T> void testConstraints(TrackedValue<T> trackedValue, T newValue) {
         trackedValue.checkForFailingConstraints(newValue).ifPresent(errorMessages -> {
-            MutableText text = Text.literal("New value does not meet constraint(s):");
+            MutableText text = Text.literal("New value does not meet constraint(s): ");
             errorMessages.forEach(errMsg -> {
                 text.append(Text.literal("\n- " + errMsg));
             });
@@ -301,9 +308,8 @@ public class QomcCommand {
         });
     }
 
-    private static <T> int setValue(CommandContext<ServerCommandSource> ctx, TrackedValue<T> trackedValue, T newValue, ValueType valueType) {
+    private static <T> void setValue(TrackedValue<T> trackedValue, T newValue) {
+        testConstraints(trackedValue, newValue);
         trackedValue.setValue(newValue);
-        Platform.sendFeedback(ctx.getSource(), () -> McUtil.configFeedback(trackedValue, valueType), false);
-        return 1;
     }
 }
