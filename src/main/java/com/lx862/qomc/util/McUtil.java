@@ -8,95 +8,94 @@ import folk.sisby.kaleido.lib.quiltconfig.api.annotations.Comment;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.TrackedValue;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueList;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueTreeNode;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
-
 import java.util.Locale;
 import java.util.Objects;
+import net.minecraft.ChatFormatting;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 
 public class McUtil {
-    public static Text configFeedback(TrackedValue<?> value, ValueType valueType) {
-        MutableText keyName = Text.literal(QconfUtil.getDisplayOrDefaultName(value)).styled(s -> s
-                .withFormatting(Formatting.GREEN)
-                .withUnderline(true));
+    public static Component configFeedback(TrackedValue<?> value, ValueType valueType) {
+        MutableComponent keyName = Component.literal(QconfUtil.getDisplayOrDefaultName(value)).withStyle(s -> s
+                .applyFormat(ChatFormatting.GREEN)
+                .withUnderlined(true));
 
-        MutableText text = Text.literal(" has been set to ").append(McUtil.formatValue(value, valueType)).fillStyle(Style.EMPTY.withUnderline(false));
+        MutableComponent text = Component.literal(" has been set to ").append(McUtil.formatValue(value, valueType)).withStyle(Style.EMPTY.withUnderlined(false));
         return keyName.append(text);
     }
 
-    public static MutableText configNodeBreadcrumb(Config config, ValueTreeNode node) {
-        MutableText fieldHeader = Text.empty();
+    public static MutableComponent configNodeBreadcrumb(Config config, ValueTreeNode node) {
+        MutableComponent fieldHeader = Component.empty();
 
         for(int i = 0; i < node.key().length(); i++) {
             ValueTreeNode breadcrumbNode = config.getNode(QconfUtil.trimKey(node.key(), node.key().length()-1-i));
-            MutableText nodeText;
+            MutableComponent nodeText;
 
             if(breadcrumbNode instanceof ValueTreeNode.Section) {
-                nodeText = Text.literal("[" + breadcrumbNode.key().getLastComponent() + "]")
-                        .fillStyle(Style.EMPTY.withColor(Formatting.GREEN));
+                nodeText = Component.literal("[" + breadcrumbNode.key().getLastComponent() + "]")
+                        .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN));
             } else {
-                nodeText = Text.literal(QconfUtil.getDisplayOrDefaultName(breadcrumbNode)).fillStyle(Style.EMPTY.withColor(Formatting.WHITE).withBold(true));
+                nodeText = Component.literal(QconfUtil.getDisplayOrDefaultName(breadcrumbNode)).withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(true));
             }
 
             if(i != node.key().length()-1) { // Add hover text
-                nodeText.styled(s -> s.withHoverEvent(Platform.hoverEventText(configNodeTooltip(breadcrumbNode))));
+                nodeText.withStyle(s -> s.withHoverEvent(Platform.hoverEventText(configNodeTooltip(breadcrumbNode))));
             }
 
             fieldHeader.append(nodeText);
             if(i != node.key().length()-1) {
-                MutableText arrowText = Text.literal(" > ").fillStyle(Style.EMPTY.withColor(Formatting.GOLD));
+                MutableComponent arrowText = Component.literal(" > ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD));
                 fieldHeader.append(arrowText);
             }
         }
         return fieldHeader;
     }
 
-    public static MutableText configNodeComments(ValueTreeNode node) {
-        MutableText text = Text.empty().fillStyle(Style.EMPTY.withColor(Formatting.GRAY).withBold(false));
+    public static MutableComponent configNodeComments(ValueTreeNode node) {
+        MutableComponent text = Component.empty().withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY).withBold(false));
         if(node.hasMetadata(Comment.TYPE)) {
             boolean prependNewLine = false;
             for(String comment : node.metadata(Comment.TYPE)) {
-                text.append(Text.literal((prependNewLine ? "\n" : "") + comment));
+                text.append(Component.literal((prependNewLine ? "\n" : "") + comment));
                 prependNewLine = true;
             }
         }
         return text;
     }
 
-    public static MutableText configNodeTooltip(ValueTreeNode node) {
+    public static MutableComponent configNodeTooltip(ValueTreeNode node) {
         if(node instanceof ValueTreeNode.Section) {
-            return Text.literal(QconfUtil.getDisplayOrDefaultName(node)).formatted(Formatting.GREEN).append("\n").append(configNodeComments(node));
+            return Component.literal(QconfUtil.getDisplayOrDefaultName(node)).withStyle(ChatFormatting.GREEN).append("\n").append(configNodeComments(node));
         } else {
-            return Text.literal(QconfUtil.getDisplayOrDefaultName(node)).formatted(Formatting.WHITE).formatted(Formatting.BOLD).append("\n").append(configNodeComments(node));
+            return Component.literal(QconfUtil.getDisplayOrDefaultName(node)).withStyle(ChatFormatting.WHITE).withStyle(ChatFormatting.BOLD).append("\n").append(configNodeComments(node));
         }
     }
 
-    public static MutableText valueOverview(TrackedValue<?> trackedValue) {
-        MutableText text = Text.literal("- ").fillStyle(Style.EMPTY.withColor(Formatting.YELLOW));
-        MutableText valueName = Text.literal(trackedValue.key().getLastComponent()).fillStyle(Style.EMPTY.withColor(Formatting.WHITE).withBold(false));
-        valueName.styled(s -> s.withHoverEvent(Platform.hoverEventText(configNodeTooltip(trackedValue))));
+    public static MutableComponent valueOverview(TrackedValue<?> trackedValue) {
+        MutableComponent text = Component.literal("- ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW));
+        MutableComponent valueName = Component.literal(trackedValue.key().getLastComponent()).withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(false));
+        valueName.withStyle(s -> s.withHoverEvent(Platform.hoverEventText(configNodeTooltip(trackedValue))));
 
-        MutableText t3 = Text.literal(": ").fillStyle(Style.EMPTY.withColor(Formatting.WHITE).withBold(false));
-        MutableText t4 = formatValue(trackedValue, ValueType.fromValue(trackedValue)).fillStyle(Style.EMPTY.withUnderline(true).withBold(false));
+        MutableComponent t3 = Component.literal(": ").withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(false));
+        MutableComponent t4 = formatValue(trackedValue, ValueType.fromValue(trackedValue)).withStyle(Style.EMPTY.withUnderlined(true).withBold(false));
 
         return text.append(valueName).append(t3).append(t4);
     }
 
-    public static MutableText valueType(TrackedValue<?> trackedValue) {
+    public static MutableComponent valueType(TrackedValue<?> trackedValue) {
         ValueType valueType = ValueType.fromValue(trackedValue);
-        MutableText finalText = Text.literal("Type: " + valueType.name);
+        MutableComponent finalText = Component.literal("Type: " + valueType.name);
 
         for(Constraint<?> constraint : trackedValue.constraints()) {
             if(constraint instanceof Constraint.Range<?> rangeConstraint) {
                 Object low = rangeConstraint.min();
                 Object high = rangeConstraint.max();
 
-                MutableText rangeConstraintText = Text.literal(" [" + low + "-" + high + "]").formatted(Formatting.YELLOW);
+                MutableComponent rangeConstraintText = Component.literal(" [" + low + "-" + high + "]").withStyle(ChatFormatting.YELLOW);
                 finalText.append(rangeConstraintText);
             } else if(constraint instanceof Constraint.All<?>) {
-                MutableText constraintText = Text.literal(" [" + constraint.getRepresentation() + "]").formatted(Formatting.YELLOW);
+                MutableComponent constraintText = Component.literal(" [" + constraint.getRepresentation() + "]").withStyle(ChatFormatting.YELLOW);
                 finalText.append(constraintText);
             }
         }
@@ -104,81 +103,81 @@ public class McUtil {
         return finalText;
     }
 
-    public static MutableText currentValue(TrackedValue<?> trackedValue) {
+    public static MutableComponent currentValue(TrackedValue<?> trackedValue) {
         boolean valueIsDefault = Objects.equals(trackedValue.value(), trackedValue.getDefaultValue());
-        MutableText headerText = Text.literal("Current Value: ");
-        MutableText valueText = formatValue(trackedValue, ValueType.fromValue(trackedValue)).styled(s -> s.withUnderline(true));
+        MutableComponent headerText = Component.literal("Current Value: ");
+        MutableComponent valueText = formatValue(trackedValue, ValueType.fromValue(trackedValue)).withStyle(s -> s.withUnderlined(true));
 
-        MutableText defaultText;
+        MutableComponent defaultText;
 
         if(valueIsDefault) {
-            defaultText = Text.literal(" (Default)").formatted(Formatting.GRAY);
+            defaultText = Component.literal(" (Default)").withStyle(ChatFormatting.GRAY);
         } else {
-            defaultText = Text.literal(" (Changed)")
-                    .styled(s -> s.withHoverEvent(Platform.hoverEventText(Text.literal("Default: " + QconfUtil.stringify(trackedValue.getDefaultValue())).formatted(Formatting.GRAY))))
-                    .formatted(Formatting.YELLOW);
+            defaultText = Component.literal(" (Changed)")
+                    .withStyle(s -> s.withHoverEvent(Platform.hoverEventText(Component.literal("Default: " + QconfUtil.stringify(trackedValue.getDefaultValue())).withStyle(ChatFormatting.GRAY))))
+                    .withStyle(ChatFormatting.YELLOW);
         }
         return headerText.append(valueText).append(defaultText);
     }
 
-    public static MutableText configNodeChangeWarning(folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning changeWarning) {
-        MutableText headerText = Text.literal("Note: ").fillStyle(Style.EMPTY.withColor(Formatting.YELLOW).withBold(true));
+    public static MutableComponent configNodeChangeWarning(folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning changeWarning) {
+        MutableComponent headerText = Component.literal("Note: ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW).withBold(true));
 
-        MutableText warningText =
+        MutableComponent warningText =
             switch(changeWarning.getType()) {
-                case Custom -> Text.literal(changeWarning.getCustomMessage());
-                case CustomTranslatable -> Text.translatable(changeWarning.getCustomMessage());
-                case RequiresRestart -> Text.literal("Restart is required for changes to apply");
-                case Experimental -> Text.literal("Experimental option, use with caution!");
-                case Unsafe -> Text.literal("Unsafe option, use at your own risk!");
+                case Custom -> Component.literal(changeWarning.getCustomMessage());
+                case CustomTranslatable -> Component.translatable(changeWarning.getCustomMessage());
+                case RequiresRestart -> Component.literal("Restart is required for changes to apply");
+                case Experimental -> Component.literal("Experimental option, use with caution!");
+                case Unsafe -> Component.literal("Unsafe option, use at your own risk!");
             };
 
-        warningText.fillStyle(Style.EMPTY.withColor(Formatting.YELLOW).withBold(false));
-        return Text.literal("\n").append(headerText).append(warningText);
+        warningText.withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW).withBold(false));
+        return Component.literal("\n").append(headerText).append(warningText);
     }
 
-    public static MutableText formatValue(TrackedValue<?> trackedValue, ValueType valueType) {
+    public static MutableComponent formatValue(TrackedValue<?> trackedValue, ValueType valueType) {
         if(valueType == ValueType.LIST) {
-            MutableText text = Text.literal("[").styled(s -> s.withUnderline(false).withColor(Formatting.WHITE));
+            MutableComponent text = Component.literal("[").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
             ValueList<?> list = (ValueList<?>)trackedValue.value();
             ValueType listValueType = ValueType.fromValue(trackedValue, list.getDefaultValue());
 
             for(int i = 0; i < list.size(); i++) {
                 Object innerValue = list.get(i);
                 text.append(formatSimpleValue(innerValue, listValueType));
-                if(i != list.size()-1) text.append(Text.literal(", ").styled(s -> s.withUnderline(false).withColor(Formatting.WHITE)));
+                if(i != list.size()-1) text.append(Component.literal(", ").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE)));
             }
-            text.append("]").styled(s -> s.withUnderline(false).withFormatting(Formatting.WHITE));
+            text.append("]").withStyle(s -> s.withUnderlined(false).applyFormat(ChatFormatting.WHITE));
             return text;
         }
 
         return formatSimpleValue(trackedValue.value(), valueType);
     }
 
-    private static MutableText formatSimpleValue(Object obj, ValueType valueType) {
+    private static MutableComponent formatSimpleValue(Object obj, ValueType valueType) {
         String str = QconfUtil.stringify(obj);
-        MutableText baseText = Text.literal(str);
+        MutableComponent baseText = Component.literal(str);
         if(valueType == ValueType.BOOLEAN) {
-            if(str.equals("true")) return baseText.formatted(Formatting.GREEN);
-            else return baseText.formatted(Formatting.RED);
+            if(str.equals("true")) return baseText.withStyle(ChatFormatting.GREEN);
+            else return baseText.withStyle(ChatFormatting.RED);
         } else if(valueType == ValueType.INTEGER || valueType == ValueType.LONG || valueType == ValueType.DOUBLE || valueType == ValueType.FLOAT) {
-            return baseText.formatted(Formatting.GOLD);
+            return baseText.withStyle(ChatFormatting.GOLD);
         } else if(valueType == ValueType.STRING) {
-            return baseText.formatted(Formatting.AQUA);
+            return baseText.withStyle(ChatFormatting.AQUA);
         } else if(valueType == ValueType.ENUM) {
-            return baseText.formatted(Formatting.BLUE);
+            return baseText.withStyle(ChatFormatting.BLUE);
         } else if(valueType == ValueType.COLOR_RGB || valueType == ValueType.COLOR_ARGB) {
             boolean hasAlpha = valueType == ValueType.COLOR_ARGB;
             String unquotedString = str.substring(1, str.length()-1);
             ColorUtil.ArgbColor color = ColorUtil.toArgbColor(unquotedString, true);
             int rgb = color.pack();
 
-            MutableText finalText = Text.literal("#").fillStyle(Style.EMPTY.withColor(rgb));
+            MutableComponent finalText = Component.literal("#").withStyle(Style.EMPTY.withColor(rgb));
 
-            MutableText aPreview = Text.literal(ColorUtil.colorToHex(color.alpha()).toUpperCase(Locale.ROOT));
-            MutableText rPreview = Text.literal(ColorUtil.colorToHex(color.red()).toUpperCase(Locale.ROOT));
-            MutableText gPreview = Text.literal(ColorUtil.colorToHex(color.green()).toUpperCase(Locale.ROOT));
-            MutableText bPreview = Text.literal(ColorUtil.colorToHex(color.blue()).toUpperCase(Locale.ROOT));
+            MutableComponent aPreview = Component.literal(ColorUtil.colorToHex(color.alpha()).toUpperCase(Locale.ROOT));
+            MutableComponent rPreview = Component.literal(ColorUtil.colorToHex(color.red()).toUpperCase(Locale.ROOT));
+            MutableComponent gPreview = Component.literal(ColorUtil.colorToHex(color.green()).toUpperCase(Locale.ROOT));
+            MutableComponent bPreview = Component.literal(ColorUtil.colorToHex(color.blue()).toUpperCase(Locale.ROOT));
 
             if(hasAlpha) finalText.append(aPreview);
             finalText.append(rPreview);

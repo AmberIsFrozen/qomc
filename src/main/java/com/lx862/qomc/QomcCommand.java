@@ -21,30 +21,31 @@ import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueKey;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueList;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueTreeNode;
 import net.fabricmc.loader.api.metadata.ModMetadata;
-import net.minecraft.command.CommandException;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.server.command.ServerCommandSource;
-import net.minecraft.text.*;
-import net.minecraft.util.Formatting;
-
+import net.minecraft.ChatFormatting;
+import net.minecraft.commands.CommandRuntimeException;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
 import java.util.*;
 import java.util.function.BiFunction;
 
 public class QomcCommand {
-    public static LiteralArgumentBuilder<ServerCommandSource> buildModNode(ModMetadata modMetadata, List<Config> configs, CommandDispatcher<ServerCommandSource> ctx) {
-        LiteralArgumentBuilder<ServerCommandSource> rootNode = CommandManager.literal(modMetadata.getId() + "Config");
-        rootNode.requires(serverCommandSource -> serverCommandSource.hasPermissionLevel(4));
+    public static LiteralArgumentBuilder<CommandSourceStack> buildModNode(ModMetadata modMetadata, List<Config> configs, CommandDispatcher<CommandSourceStack> ctx) {
+        LiteralArgumentBuilder<CommandSourceStack> rootNode = Commands.literal(modMetadata.getId() + "Config");
+        rootNode.requires(serverCommandSource -> serverCommandSource.hasPermission(4));
 
         for(Config config : configs) {
             boolean singleConfigMod = configs.size() == 1;
 
             if(singleConfigMod) {
-                for(LiteralArgumentBuilder<ServerCommandSource> node : buildConfigNodes(config)) {
+                for(LiteralArgumentBuilder<CommandSourceStack> node : buildConfigNodes(config)) {
                     rootNode.then(node);
                 }
             } else {
-                LiteralArgumentBuilder<ServerCommandSource> subConfigNode = CommandManager.literal(config.id());
-                for(LiteralArgumentBuilder<ServerCommandSource> node : buildConfigNodes(config)) {
+                LiteralArgumentBuilder<CommandSourceStack> subConfigNode = Commands.literal(config.id());
+                for(LiteralArgumentBuilder<CommandSourceStack> node : buildConfigNodes(config)) {
                     subConfigNode.then(node);
                 }
                 rootNode.then(subConfigNode);
@@ -54,12 +55,12 @@ public class QomcCommand {
         return rootNode;
     }
 
-    public static List<LiteralArgumentBuilder<ServerCommandSource>> buildConfigNodes(Config config) {
+    public static List<LiteralArgumentBuilder<CommandSourceStack>> buildConfigNodes(Config config) {
         ConfigTree configTree = ConfigTree.of(config);
 
-        List<LiteralArgumentBuilder<ServerCommandSource>> nodes = new ArrayList<>();
+        List<LiteralArgumentBuilder<CommandSourceStack>> nodes = new ArrayList<>();
         for(TrackedValue<?> field : configTree.rootSection().fields()) {
-            LiteralArgumentBuilder<ServerCommandSource> fieldNode = buildTrackedValueNode(config, field);
+            LiteralArgumentBuilder<CommandSourceStack> fieldNode = buildTrackedValueNode(config, field);
             nodes.add(fieldNode);
         }
 
@@ -70,19 +71,19 @@ public class QomcCommand {
         return nodes;
     }
 
-    public static LiteralArgumentBuilder<ServerCommandSource> buildSectionNode(Config config, ValueKey sectionKey, ConfigSection configSection) {
-        LiteralArgumentBuilder<ServerCommandSource> sectionNode = CommandManager.literal("[" + sectionKey.getLastComponent() + "]");
+    public static LiteralArgumentBuilder<CommandSourceStack> buildSectionNode(Config config, ValueKey sectionKey, ConfigSection configSection) {
+        LiteralArgumentBuilder<CommandSourceStack> sectionNode = Commands.literal("[" + sectionKey.getLastComponent() + "]");
 
         sectionNode.executes(ctx -> {
             ValueTreeNode sectionConfigNode = config.getNode(sectionKey);
 
             Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeBreadcrumb(config, sectionConfigNode), false);
             Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeComments(sectionConfigNode), false);
-            Platform.sendFeedback(ctx.getSource(), () -> Text.empty(), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
 
             if(sectionConfigNode.hasMetadata(ChangeWarning.TYPE)) {
                 Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeChangeWarning(sectionConfigNode.metadata(ChangeWarning.TYPE)), false);
-                Platform.sendFeedback(ctx.getSource(), () -> Text.empty(), false);
+                Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
             }
 
             for(TrackedValue<?> value : configSection.fields()) {
@@ -93,41 +94,41 @@ public class QomcCommand {
         });
 
         for(TrackedValue<?> trackedValue : configSection.fields()) {
-            LiteralArgumentBuilder<ServerCommandSource> trackedValueNode = buildTrackedValueNode(config, trackedValue);
+            LiteralArgumentBuilder<CommandSourceStack> trackedValueNode = buildTrackedValueNode(config, trackedValue);
             sectionNode.then(trackedValueNode);
         }
         for(Map.Entry<ValueKey, ConfigSection> section : configSection.sections().entrySet()) {
-            LiteralArgumentBuilder<ServerCommandSource> nestedSectionNode = buildSectionNode(config, section.getKey(), section.getValue());
+            LiteralArgumentBuilder<CommandSourceStack> nestedSectionNode = buildSectionNode(config, section.getKey(), section.getValue());
             sectionNode.then(nestedSectionNode);
         }
         return sectionNode;
     }
 
 
-    public static <T> LiteralArgumentBuilder<ServerCommandSource> buildTrackedValueNode(Config config, TrackedValue<T> trackedValue) {
-        LiteralArgumentBuilder<ServerCommandSource> fieldNode = CommandManager.literal(trackedValue.key().getLastComponent());
+    public static <T> LiteralArgumentBuilder<CommandSourceStack> buildTrackedValueNode(Config config, TrackedValue<T> trackedValue) {
+        LiteralArgumentBuilder<CommandSourceStack> fieldNode = Commands.literal(trackedValue.key().getLastComponent());
         fieldNode.executes(ctx -> {
             Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeBreadcrumb(config, trackedValue), false);
             Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeComments(trackedValue), false);
 
-            Platform.sendFeedback(ctx.getSource(), () -> Text.empty(), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
             Platform.sendFeedback(ctx.getSource(), () -> McUtil.currentValue(trackedValue), false);
-            Platform.sendFeedback(ctx.getSource(), () -> Text.empty(), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
 
             if(trackedValue.hasMetadata(ChangeWarning.TYPE)) {
                 Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeChangeWarning(trackedValue.metadata(ChangeWarning.TYPE)), false);
-                Platform.sendFeedback(ctx.getSource(), () -> Text.empty(), false);
+                Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
             }
 
             String suggestedCommand = "/";
-            for(ParsedCommandNode<ServerCommandSource> node : ctx.getNodes()) {
+            for(ParsedCommandNode<CommandSourceStack> node : ctx.getNodes()) {
                 suggestedCommand += node.getNode().getName() + " ";
             }
 
-            MutableText changeText = Text.literal("[\uD83D\uDD8A Change]").fillStyle(
+            MutableComponent changeText = Component.literal("[\uD83D\uDD8A Change]").withStyle(
                     Style.EMPTY
-                            .withColor(Formatting.GOLD)
-                            .withUnderline(true)
+                            .withColor(ChatFormatting.GOLD)
+                            .withUnderlined(true)
                             .withHoverEvent(Platform.hoverEventText(McUtil.valueType(trackedValue)))
                             .withClickEvent(Platform.clickEventSuggestCommand(suggestedCommand)));
 
@@ -136,7 +137,7 @@ public class QomcCommand {
         });
 
         ValueType valueType = ValueType.fromValue(trackedValue);
-        List<ArgumentBuilder<ServerCommandSource, ?>> valueNodes = buildValueNode(trackedValue, valueType, (ctx, newValue) -> {
+        List<ArgumentBuilder<CommandSourceStack, ?>> valueNodes = buildValueNode(trackedValue, valueType, (ctx, newValue) -> {
             if(valueType == ValueType.BOOLEAN || valueType == ValueType.STRING || valueType == ValueType.INTEGER || valueType == ValueType.LONG || valueType == ValueType.FLOAT || valueType == ValueType.DOUBLE) {
                 return configSetValue(ctx, trackedValue, valueType, newValue);
             }
@@ -152,61 +153,61 @@ public class QomcCommand {
             return 0;
         });
 
-        for(ArgumentBuilder<ServerCommandSource, ?> valueNode : valueNodes) {
+        for(ArgumentBuilder<CommandSourceStack, ?> valueNode : valueNodes) {
             fieldNode.then(valueNode);
         }
 
         fieldNode.then(
-            CommandManager.literal("{default}")
+            Commands.literal("{default}")
                 .executes(ctx -> configSetValue(ctx, trackedValue, valueType, trackedValue.getDefaultValue()))
         );
 
         return fieldNode;
     }
 
-    public static <T> List<ArgumentBuilder<ServerCommandSource, ?>> buildValueNode(TrackedValue<T> value, ValueType valueType, BiFunction<CommandContext<ServerCommandSource>, T, Integer> callback) {
+    public static <T> List<ArgumentBuilder<CommandSourceStack, ?>> buildValueNode(TrackedValue<T> value, ValueType valueType, BiFunction<CommandContext<CommandSourceStack>, T, Integer> callback) {
         Constraint.Range<?> rangeConstraint = null;
         for (Constraint<?> constraint : value.constraints()) {
             if (constraint instanceof Constraint.Range<?>) rangeConstraint = (Constraint.Range<?>) constraint;
         }
-        List<ArgumentBuilder<ServerCommandSource, ?>> arguments = new ArrayList<>();
+        List<ArgumentBuilder<CommandSourceStack, ?>> arguments = new ArrayList<>();
 
         if(valueType == ValueType.BOOLEAN) {
-            arguments.add(CommandManager.argument("boolean", BoolArgumentType.bool())
+            arguments.add(Commands.argument("boolean", BoolArgumentType.bool())
                     .executes(ctx -> callback.apply(ctx, (T)(Boolean)BoolArgumentType.getBool(ctx, "boolean"))));
         }
         if(valueType == ValueType.STRING) {
-            arguments.add(CommandManager.argument("string", StringArgumentType.greedyString())
+            arguments.add(Commands.argument("string", StringArgumentType.greedyString())
                     .executes(ctx -> callback.apply(ctx, (T)StringArgumentType.getString(ctx, "string"))));
         }
         if(valueType == ValueType.COLOR_RGB) {
-            arguments.add(CommandManager.argument("rgbColor", StringArgumentType.string())
+            arguments.add(Commands.argument("rgbColor", StringArgumentType.string())
                 .executes(ctx -> callback.apply(ctx, (T)StringArgumentType.getString(ctx, "rgbColor")))
             );
         }
         if(valueType == ValueType.COLOR_ARGB) {
-            arguments.add(CommandManager.argument("argbColor", StringArgumentType.string())
+            arguments.add(Commands.argument("argbColor", StringArgumentType.string())
                 .executes(ctx -> callback.apply(ctx, (T)StringArgumentType.getString(ctx, "argbColor")))
             );
         }
         if(valueType == ValueType.INTEGER) {
             IntegerArgumentType integerArgumentType = rangeConstraint == null ? IntegerArgumentType.integer() : IntegerArgumentType.integer((Integer) rangeConstraint.min(), (Integer) rangeConstraint.max());
-            arguments.add(CommandManager.argument("number", integerArgumentType)
+            arguments.add(Commands.argument("number", integerArgumentType)
                     .executes(ctx -> callback.apply(ctx, (T)(Integer)IntegerArgumentType.getInteger(ctx, "number"))));
         }
         if(valueType == ValueType.LONG) {
             LongArgumentType longArgumentType = rangeConstraint == null ? LongArgumentType.longArg() : LongArgumentType.longArg((Long) rangeConstraint.min(), (Long) rangeConstraint.max());
-            arguments.add(CommandManager.argument("number", longArgumentType)
+            arguments.add(Commands.argument("number", longArgumentType)
                     .executes(ctx -> callback.apply(ctx, (T)(Long)LongArgumentType.getLong(ctx, "number"))));
         }
         if(valueType == ValueType.FLOAT) {
             FloatArgumentType floatArgumentType = rangeConstraint == null ? FloatArgumentType.floatArg() : FloatArgumentType.floatArg((Float) rangeConstraint.min(), (Float) rangeConstraint.max());
-            arguments.add(CommandManager.argument("number", floatArgumentType)
+            arguments.add(Commands.argument("number", floatArgumentType)
                     .executes(ctx -> callback.apply(ctx, (T)(Float)FloatArgumentType.getFloat(ctx, "number"))));
         }
         if(valueType == ValueType.DOUBLE) {
             DoubleArgumentType doubleArgumentType = rangeConstraint == null ? DoubleArgumentType.doubleArg() : DoubleArgumentType.doubleArg((Double) rangeConstraint.min(), (Double) rangeConstraint.max());
-            arguments.add(CommandManager.argument("number", doubleArgumentType)
+            arguments.add(Commands.argument("number", doubleArgumentType)
                     .executes(ctx -> callback.apply(ctx, (T)(Double)DoubleArgumentType.getDouble(ctx, "number"))));
         }
         if(valueType == ValueType.ENUM) {
@@ -214,7 +215,7 @@ public class QomcCommand {
             for(var enumValue : enumValues) {
                 String enumName = enumValue.name();
                 arguments.add(
-                    CommandManager.literal(enumName)
+                    Commands.literal(enumName)
                             .executes(ctx -> callback.apply(ctx, (T)enumName))
                 );
             }
@@ -222,16 +223,16 @@ public class QomcCommand {
         if(valueType == ValueType.LIST) {
             TrackedValue<ValueList<Object>> listTrackedValue = (TrackedValue<ValueList<Object>>)value;
             ValueType listContentValueType = ValueType.fromValue(value, listTrackedValue.value().getDefaultValue());
-            LiteralArgumentBuilder<ServerCommandSource> addNode = CommandManager.literal("add");
-            LiteralArgumentBuilder<ServerCommandSource> removeNode = CommandManager.literal("remove");
+            LiteralArgumentBuilder<CommandSourceStack> addNode = Commands.literal("add");
+            LiteralArgumentBuilder<CommandSourceStack> removeNode = Commands.literal("remove");
 
-            for(ArgumentBuilder<ServerCommandSource, ?> listNode : buildValueNode(value, listContentValueType, (ctx, newValue) -> {
+            for(ArgumentBuilder<CommandSourceStack, ?> listNode : buildValueNode(value, listContentValueType, (ctx, newValue) -> {
                 return configAddList(ctx, listTrackedValue, newValue);
             })) {
                 addNode.then(listNode);
             }
 
-            for(ArgumentBuilder<ServerCommandSource, ?> listNode : buildValueNode(value, listContentValueType, (ctx, newValue) -> {
+            for(ArgumentBuilder<CommandSourceStack, ?> listNode : buildValueNode(value, listContentValueType, (ctx, newValue) -> {
                 return configRemoveList(ctx, listTrackedValue, newValue);
             })) {
                 if(listNode instanceof RequiredArgumentBuilder<?, ?> requiredArgumentBuilder) {
@@ -256,55 +257,55 @@ public class QomcCommand {
         return arguments;
     }
 
-    private static <T> int configSetValue(CommandContext<ServerCommandSource> ctx, TrackedValue<T> trackedValue, ValueType valueType, T newValue) {
+    private static <T> int configSetValue(CommandContext<CommandSourceStack> ctx, TrackedValue<T> trackedValue, ValueType valueType, T newValue) {
         setValue(trackedValue, newValue);
         Platform.sendFeedback(ctx.getSource(), () -> McUtil.configFeedback(trackedValue, valueType), false);
         return 1;
     }
 
-    private static int configSetColorHex(CommandContext<ServerCommandSource> ctx, TrackedValue<String> trackedValue, String input, boolean isARGB) {
+    private static int configSetColorHex(CommandContext<CommandSourceStack> ctx, TrackedValue<String> trackedValue, String input, boolean isARGB) {
         testConstraints(trackedValue, input);
         try {
             return configSetValue(ctx, trackedValue, isARGB ? ValueType.COLOR_ARGB : ValueType.COLOR_RGB, ColorUtil.colorToHex(ColorUtil.toArgbColor(input, isARGB), isARGB));
         } catch (NumberFormatException e) {
-            throw new CommandException(Text.literal("Invalid RGB Hex color format: " + input));
+            throw new CommandRuntimeException(Component.literal("Invalid RGB Hex color format: " + input));
         }
     }
 
-    private static int configSetEnum(CommandContext<ServerCommandSource> ctx, TrackedValue<Enum<?>> value, String enumName) {
+    private static int configSetEnum(CommandContext<CommandSourceStack> ctx, TrackedValue<Enum<?>> value, String enumName) {
         return configSetValue(ctx, value, ValueType.ENUM, Enum.valueOf(value.getDefaultValue().getClass(), enumName));
     }
 
-    private static <T> int configAddList(CommandContext<ServerCommandSource> ctx, TrackedValue<ValueList<T>> value, T item) {
+    private static <T> int configAddList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item) {
         ValueList<T> newList = (ValueList<T>) value.value().copy();
         newList.add(item);
         testConstraints(value, newList);
         setValue(value, newList);
-        Platform.sendFeedback(ctx.getSource(), () -> Text.literal("Added " + QconfUtil.stringify(item) + " to list " + QconfUtil.getDisplayOrDefaultName(value) + ".").formatted(Formatting.GREEN), false);
-        Platform.sendFeedback(ctx.getSource(), () -> Text.literal("New list: ").formatted(Formatting.GREEN).append(McUtil.formatValue(value, ValueType.LIST)), false);
+        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Added " + QconfUtil.stringify(item) + " to list " + QconfUtil.getDisplayOrDefaultName(value) + ".").withStyle(ChatFormatting.GREEN), false);
+        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(McUtil.formatValue(value, ValueType.LIST)), false);
         return 1;
     }
 
-    private static <T> int configRemoveList(CommandContext<ServerCommandSource> ctx, TrackedValue<ValueList<T>> value, T item) {
+    private static <T> int configRemoveList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item) {
         if(!value.value().contains(item)) {
-            Platform.sendFeedback(ctx.getSource(), () -> Text.literal("Value \"" + item + "\" is not in list " + QconfUtil.getDisplayOrDefaultName(value)).formatted(Formatting.RED), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Value \"" + item + "\" is not in list " + QconfUtil.getDisplayOrDefaultName(value)).withStyle(ChatFormatting.RED), false);
             return 0;
         }
 
         value.value().remove(item);
-        Platform.sendFeedback(ctx.getSource(), () -> Text.literal("Removed " + QconfUtil.stringify(item) + " from list " + QconfUtil.getDisplayOrDefaultName(value) + ".").formatted(Formatting.GREEN), false);
-        Platform.sendFeedback(ctx.getSource(), () -> Text.literal("New list: ").formatted(Formatting.GREEN).append(McUtil.formatValue(value, ValueType.LIST)), false);
+        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed " + QconfUtil.stringify(item) + " from list " + QconfUtil.getDisplayOrDefaultName(value) + ".").withStyle(ChatFormatting.GREEN), false);
+        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(McUtil.formatValue(value, ValueType.LIST)), false);
         setValue(value, value.value());
         return 1;
     }
 
     private static <T> void testConstraints(TrackedValue<T> trackedValue, T newValue) {
         trackedValue.checkForFailingConstraints(newValue).ifPresent(errorMessages -> {
-            MutableText text = Text.literal("New value does not meet constraint(s): ");
+            MutableComponent text = Component.literal("New value does not meet constraint(s): ");
             errorMessages.forEach(errMsg -> {
-                text.append(Text.literal("\n- " + errMsg));
+                text.append(Component.literal("\n- " + errMsg));
             });
-            throw new CommandException(text);
+            throw new CommandRuntimeException(text);
         });
     }
 
