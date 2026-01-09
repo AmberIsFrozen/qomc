@@ -239,10 +239,8 @@ public class QomcCommand {
                     requiredArgumentBuilder.suggests((commandContext, suggestionsBuilder) -> {
                         for(Object item : listTrackedValue.value()) {
                             String str = item.toString();
-                            if(item instanceof String) {
-                                str = "\"" + str + "\"";
-                            }
-                            suggestionsBuilder.suggest(str);
+                            // TODO: Quote string if necessary
+                            suggestionsBuilder.suggest(item.toString());
                         }
                         return suggestionsBuilder.buildFuture();
                     });
@@ -281,6 +279,7 @@ public class QomcCommand {
         newList.add(item);
         testConstraints(value, newList);
         setValue(value, newList);
+
         Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Added " + QconfUtil.stringify(item) + " to list " + QconfUtil.getDisplayOrDefaultName(value) + ".").withStyle(ChatFormatting.GREEN), false);
         Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(McUtil.formatValue(value, ValueType.LIST)), false);
         return 1;
@@ -291,11 +290,11 @@ public class QomcCommand {
             Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Value \"" + item + "\" is not in list " + QconfUtil.getDisplayOrDefaultName(value)).withStyle(ChatFormatting.RED), false);
             return 0;
         }
-
         value.value().remove(item);
+        setValue(value, value.value());
+
         Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed " + QconfUtil.stringify(item) + " from list " + QconfUtil.getDisplayOrDefaultName(value) + ".").withStyle(ChatFormatting.GREEN), false);
         Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(McUtil.formatValue(value, ValueType.LIST)), false);
-        setValue(value, value.value());
         return 1;
     }
 

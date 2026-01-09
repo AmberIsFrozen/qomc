@@ -8,13 +8,13 @@ import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueKey;
 public class ConfigTree {
     private final ConfigSection rootSection;
 
+    public static ConfigTree of(Config config) {
+        return new ConfigTree(config);
+    }
+
     protected ConfigTree(Config config) {
         this.rootSection = ConfigSection.create();
         generateCommandTree(config);
-    }
-
-    public static ConfigTree of(Config config) {
-        return new ConfigTree(config);
     }
 
     private void generateCommandTree(Config config) {

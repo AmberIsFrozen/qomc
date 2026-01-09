@@ -11,7 +11,7 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class QoMC implements ModInitializer {
+public class Qomc implements ModInitializer {
     private static final Logger LOGGER = LoggerFactory.getLogger("QoMC");
 
     @Override
@@ -22,7 +22,9 @@ public class QoMC implements ModInitializer {
             for(Map.Entry<ModMetadata, List<Config>> modConfigEntry : configGroup.entrySet()) {
                 ModMetadata belongingMod = modConfigEntry.getKey();
                 List<Config> modConfigs = modConfigEntry.getValue();
-                commandDispatcher.register(QomcCommand.buildModNode(belongingMod, modConfigs, commandDispatcher));
+                commandDispatcher.register(
+                    QomcCommand.buildModNode(belongingMod, modConfigs, commandDispatcher)
+                );
             }
         });
     }

@@ -92,7 +92,7 @@ public class McUtil {
                 Object low = rangeConstraint.min();
                 Object high = rangeConstraint.max();
 
-                MutableComponent rangeConstraintText = Component.literal(" [" + low + "-" + high + "]").withStyle(ChatFormatting.YELLOW);
+                MutableComponent rangeConstraintText = Component.literal(" [" + low + " to " + high + "]").withStyle(ChatFormatting.YELLOW);
                 finalText.append(rangeConstraintText);
             } else if(constraint instanceof Constraint.All<?>) {
                 MutableComponent constraintText = Component.literal(" [" + constraint.getRepresentation() + "]").withStyle(ChatFormatting.YELLOW);

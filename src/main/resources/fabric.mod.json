@@ -16,7 +16,7 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-			"com.lx862.qomc.QoMC"
+          "com.lx862.qomc.Qomc"
 		],
 		"client": [
 		]
