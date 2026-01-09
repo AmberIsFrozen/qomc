@@ -1,0 +1,31 @@
+{
+	"schemaVersion": 1,
+	"id": "qomc",
+	"version": "${version}",
+	"name": "QoMC",
+	"description": "Qconf over Minecraft Commands!",
+	"authors": [
+		"AmberFrost"
+	],
+	"contact": {
+		"homepage": "https://github.com/AmberIsFrozen/qomc",
+		"sources": "https://github.com/AmberIsFrozen/qomc"
+	},
+	"license": "ARR",
+	"icon": "assets/qomc/icon.png",
+	"environment": "*",
+	"entrypoints": {
+		"main": [
+			"com.lx862.qomc.QoMC"
+		],
+		"client": [
+		]
+	},
+	"mixins": [
+	],
+	"depends": {
+		"fabricloader": ">=0.16.10",
+		"minecraft": "~1.20.1",
+		"fabric-api": "*"
+	}
+}
