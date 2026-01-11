@@ -17,11 +17,11 @@ import net.minecraft.network.chat.Style;
 
 public class McUtil {
     public static Component configFeedback(TrackedValue<?> value, ValueType valueType) {
-        MutableComponent keyName = Component.literal(QconfUtil.getDisplayOrDefaultName(value)).withStyle(s -> s
+        MutableComponent keyName = Component.literal(QconfUtil.getDisplayName(value)).withStyle(s -> s
                 .applyFormat(ChatFormatting.GREEN)
                 .withUnderlined(true));
 
-        MutableComponent text = Component.literal(" has been set to ").append(McUtil.formatValue(value, valueType)).withStyle(Style.EMPTY.withUnderlined(false));
+        MutableComponent text = Component.literal(" has been set to ").withStyle(s -> s.withUnderlined(false)).append(McUtil.formatValue(value, valueType));
         return keyName.append(text);
     }
 
@@ -36,7 +36,7 @@ public class McUtil {
                 nodeText = Component.literal("[" + breadcrumbNode.key().getLastComponent() + "]")
                         .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN));
             } else {
-                nodeText = Component.literal(QconfUtil.getDisplayOrDefaultName(breadcrumbNode)).withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(true));
+                nodeText = Component.literal(QconfUtil.getDisplayName(breadcrumbNode)).withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(true));
             }
 
             if(i != node.key().length()-1) { // Add hover text
@@ -66,38 +66,71 @@ public class McUtil {
 
     public static MutableComponent configNodeTooltip(ValueTreeNode node) {
         if(node instanceof ValueTreeNode.Section) {
-            return Component.literal(QconfUtil.getDisplayOrDefaultName(node)).withStyle(ChatFormatting.GREEN).append("\n").append(configNodeComments(node));
+            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.GREEN).append("\n").append(configNodeComments(node));
         } else {
-            return Component.literal(QconfUtil.getDisplayOrDefaultName(node)).withStyle(ChatFormatting.WHITE).withStyle(ChatFormatting.BOLD).append("\n").append(configNodeComments(node));
+            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.WHITE).withStyle(ChatFormatting.BOLD).append("\n").append(configNodeComments(node));
         }
     }
 
     public static MutableComponent valueOverview(TrackedValue<?> trackedValue) {
-        MutableComponent text = Component.literal("- ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW));
+        MutableComponent text = Component.literal("* ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW));
         MutableComponent valueName = Component.literal(trackedValue.key().getLastComponent()).withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(false));
-        valueName.withStyle(s -> s.withHoverEvent(Platform.hoverEventText(configNodeTooltip(trackedValue))));
 
         MutableComponent t3 = Component.literal(": ").withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(false));
-        MutableComponent t4 = formatValue(trackedValue, ValueType.fromValue(trackedValue)).withStyle(Style.EMPTY.withUnderlined(true).withBold(false));
-
+        MutableComponent t4 = formatValue(trackedValue, ValueType.fromValue(trackedValue)).withStyle(Style.EMPTY.withBold(false));
         return text.append(valueName).append(t3).append(t4);
     }
 
     public static MutableComponent valueType(TrackedValue<?> trackedValue) {
         ValueType valueType = ValueType.fromValue(trackedValue);
-        MutableComponent finalText = Component.literal("Type: " + valueType.name);
+        return Component.literal("Type: " + valueType.name).append(constraintsText(trackedValue.constraints()));
+    }
 
-        for(Constraint<?> constraint : trackedValue.constraints()) {
+    public static <T> MutableComponent constraintsText(Iterable<Constraint<T>> constraints) {
+        MutableComponent finalText = Component.empty();
+
+        for(Constraint<?> constraint : constraints) {
+            String constraintStr;
             if(constraint instanceof Constraint.Range<?> rangeConstraint) {
-                Object low = rangeConstraint.min();
-                Object high = rangeConstraint.max();
+                finalText.append("\n");
+                boolean hasLowerConstraint = false;
+                boolean hasUpperConstraint = false;
 
-                MutableComponent rangeConstraintText = Component.literal(" [" + low + " to " + high + "]").withStyle(ChatFormatting.YELLOW);
-                finalText.append(rangeConstraintText);
-            } else if(constraint instanceof Constraint.All<?>) {
-                MutableComponent constraintText = Component.literal(" [" + constraint.getRepresentation() + "]").withStyle(ChatFormatting.YELLOW);
-                finalText.append(constraintText);
+                Object lower = rangeConstraint.min();
+                Object upper = rangeConstraint.max();
+
+                if(lower instanceof Integer val) {
+                    hasLowerConstraint = val != Integer.MIN_VALUE;
+                    hasUpperConstraint = (Integer)upper != Integer.MAX_VALUE;
+                }
+                if(lower instanceof Double val) {
+                    hasLowerConstraint = val != Double.MIN_VALUE;
+                    hasUpperConstraint = (Double) upper != Double.MAX_VALUE;
+                }
+                if(lower instanceof Float val) {
+                    hasLowerConstraint = val != Float.MIN_VALUE;
+                    hasUpperConstraint = (Float)upper != Float.MAX_VALUE;
+                }
+                if(lower instanceof Long val) {
+                    hasLowerConstraint = val != Long.MIN_VALUE;
+                    hasUpperConstraint = (Long)upper != Long.MAX_VALUE;
+                }
+
+                if(hasLowerConstraint && !hasUpperConstraint) {
+                    constraintStr = "Larger than " + lower;
+                } else if(hasUpperConstraint && !hasLowerConstraint) {
+                    constraintStr = "Smaller than " + upper;
+                } else {
+                    constraintStr = lower + " to " + upper;
+                }
+            } else if(ValueType.ARGB_CONSTRAINTS.stream().anyMatch(s -> constraint.getRepresentation().contains(s))) {
+                constraintStr = "Color Hex (ARGB)";
+            } else if(ValueType.RGB_CONSTRAINTS.stream().anyMatch(s -> constraint.getRepresentation().contains(s))) {
+                constraintStr = "Color Hex (RGB)";
+            } else {
+                constraintStr = constraint.getRepresentation();
             }
+            finalText.append(Component.literal("[" + constraintStr + "]").withStyle(ChatFormatting.YELLOW));
         }
 
         return finalText;
@@ -106,7 +139,7 @@ public class McUtil {
     public static MutableComponent currentValue(TrackedValue<?> trackedValue) {
         boolean valueIsDefault = Objects.equals(trackedValue.value(), trackedValue.getDefaultValue());
         MutableComponent headerText = Component.literal("Current Value: ");
-        MutableComponent valueText = formatValue(trackedValue, ValueType.fromValue(trackedValue)).withStyle(s -> s.withUnderlined(true));
+        MutableComponent valueText = formatValue(trackedValue, ValueType.fromValue(trackedValue));
 
         MutableComponent defaultText;
 
@@ -137,6 +170,7 @@ public class McUtil {
     }
 
     public static MutableComponent formatValue(TrackedValue<?> trackedValue, ValueType valueType) {
+        boolean valueIsDefault = Objects.equals(trackedValue.getDefaultValue(), trackedValue.value());
         if(valueType == ValueType.LIST) {
             MutableComponent text = Component.literal("[").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
             ValueList<?> list = (ValueList<?>)trackedValue.value();
@@ -147,11 +181,11 @@ public class McUtil {
                 text.append(formatSimpleValue(innerValue, listValueType));
                 if(i != list.size()-1) text.append(Component.literal(", ").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE)));
             }
-            text.append("]").withStyle(s -> s.withUnderlined(false).applyFormat(ChatFormatting.WHITE));
+            text.append("]").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
             return text;
         }
 
-        return formatSimpleValue(trackedValue.value(), valueType);
+        return formatSimpleValue(trackedValue.value(), valueType).withStyle(s -> s.withUnderlined(!valueIsDefault));
     }
 
     private static MutableComponent formatSimpleValue(Object obj, ValueType valueType) {

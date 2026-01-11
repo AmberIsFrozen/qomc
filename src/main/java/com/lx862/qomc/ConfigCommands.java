@@ -31,7 +31,7 @@ import net.minecraft.network.chat.Style;
 import java.util.*;
 import java.util.function.BiFunction;
 
-public class QomcCommand {
+public class ConfigCommands {
     public static LiteralArgumentBuilder<CommandSourceStack> buildModNode(ModMetadata modMetadata, List<Config> configs, CommandDispatcher<CommandSourceStack> ctx) {
         LiteralArgumentBuilder<CommandSourceStack> rootNode = Commands.literal(modMetadata.getId() + "Config");
         rootNode.requires(serverCommandSource -> serverCommandSource.hasPermission(4));
@@ -86,8 +86,14 @@ public class QomcCommand {
                 Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
             }
 
-            for(TrackedValue<?> value : configSection.fields()) {
-                Platform.sendFeedback(ctx.getSource(), () -> McUtil.valueOverview(value), false);
+            for(TrackedValue<?> trackedValue : configSection.fields()) {
+                String command = buildCommandString(ctx) + trackedValue.key().getLastComponent();
+
+                Platform.sendFeedback(ctx.getSource(), () -> McUtil.valueOverview(trackedValue)
+                        .withStyle(s ->
+                            s.withHoverEvent(Platform.hoverEventText(McUtil.configNodeTooltip(trackedValue)))
+                            .withClickEvent(Platform.clickEventSuggestCommand(command))
+                        ), false);
             }
 
             return 1;
@@ -112,7 +118,8 @@ public class QomcCommand {
             Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeComments(trackedValue), false);
 
             Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
-            Platform.sendFeedback(ctx.getSource(), () -> McUtil.currentValue(trackedValue), false);
+            Platform.sendFeedback(ctx.getSource(), () -> McUtil.currentValue(trackedValue)
+                    .withStyle(s -> s.withHoverEvent(Platform.hoverEventText(McUtil.valueType(trackedValue)))), false);
             Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
 
             if(trackedValue.hasMetadata(ChangeWarning.TYPE)) {
@@ -120,17 +127,17 @@ public class QomcCommand {
                 Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
             }
 
-            String suggestedCommand = "/";
-            for(ParsedCommandNode<CommandSourceStack> node : ctx.getNodes()) {
-                suggestedCommand += node.getNode().getName() + " ";
-            }
+            MutableComponent changeText;
 
-            MutableComponent changeText = Component.literal("[\uD83D\uDD8A Change]").withStyle(
+            if(trackedValue.isBeingOverridden()) {
+                changeText = Component.literal("Value is overriden to " + QconfUtil.stringify(trackedValue.value()) + " by one or more mods.").withStyle(ChatFormatting.YELLOW);
+            } else {
+                changeText = Component.literal("[\uD83D\uDD8A Change]").withStyle(
                     Style.EMPTY
-                            .withColor(ChatFormatting.GOLD)
-                            .withUnderlined(true)
-                            .withHoverEvent(Platform.hoverEventText(McUtil.valueType(trackedValue)))
-                            .withClickEvent(Platform.clickEventSuggestCommand(suggestedCommand)));
+                        .withColor(ChatFormatting.GOLD)
+                        .withUnderlined(true)
+                        .withClickEvent(Platform.clickEventSuggestCommand(buildCommandString(ctx))));
+            }
 
             Platform.sendFeedback(ctx.getSource(), () -> changeText, false);
             return 1;
@@ -238,9 +245,8 @@ public class QomcCommand {
                 if(listNode instanceof RequiredArgumentBuilder<?, ?> requiredArgumentBuilder) {
                     requiredArgumentBuilder.suggests((commandContext, suggestionsBuilder) -> {
                         for(Object item : listTrackedValue.value()) {
-                            String str = item.toString();
-                            // TODO: Quote string if necessary
-                            suggestionsBuilder.suggest(item.toString());
+                            String str = StringArgumentType.escapeIfRequired(item.toString());
+                            suggestionsBuilder.suggest(str);
                         }
                         return suggestionsBuilder.buildFuture();
                     });
@@ -253,6 +259,14 @@ public class QomcCommand {
         }
 
         return arguments;
+    }
+
+    private static String buildCommandString(CommandContext<CommandSourceStack> ctx) {
+        String suggestedCommand = "/";
+        for(ParsedCommandNode<CommandSourceStack> node : ctx.getNodes()) {
+            suggestedCommand += node.getNode().getName() + " ";
+        }
+        return suggestedCommand;
     }
 
     private static <T> int configSetValue(CommandContext<CommandSourceStack> ctx, TrackedValue<T> trackedValue, ValueType valueType, T newValue) {
@@ -280,20 +294,20 @@ public class QomcCommand {
         testConstraints(value, newList);
         setValue(value, newList);
 
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Added " + QconfUtil.stringify(item) + " to list " + QconfUtil.getDisplayOrDefaultName(value) + ".").withStyle(ChatFormatting.GREEN), false);
+        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Added " + QconfUtil.stringify(item) + " to list " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
         Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(McUtil.formatValue(value, ValueType.LIST)), false);
         return 1;
     }
 
     private static <T> int configRemoveList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item) {
         if(!value.value().contains(item)) {
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Value \"" + item + "\" is not in list " + QconfUtil.getDisplayOrDefaultName(value)).withStyle(ChatFormatting.RED), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Value \"" + item + "\" is not in list " + QconfUtil.getDisplayName(value)).withStyle(ChatFormatting.RED), false);
             return 0;
         }
         value.value().remove(item);
         setValue(value, value.value());
 
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed " + QconfUtil.stringify(item) + " from list " + QconfUtil.getDisplayOrDefaultName(value) + ".").withStyle(ChatFormatting.GREEN), false);
+        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed " + QconfUtil.stringify(item) + " from list " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
         Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(McUtil.formatValue(value, ValueType.LIST)), false);
         return 1;
     }

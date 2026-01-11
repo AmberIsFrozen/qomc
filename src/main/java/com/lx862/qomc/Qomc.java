@@ -23,7 +23,7 @@ public class Qomc implements ModInitializer {
                 ModMetadata belongingMod = modConfigEntry.getKey();
                 List<Config> modConfigs = modConfigEntry.getValue();
                 commandDispatcher.register(
-                    QomcCommand.buildModNode(belongingMod, modConfigs, commandDispatcher)
+                    ConfigCommands.buildModNode(belongingMod, modConfigs, commandDispatcher)
                 );
             }
         });
