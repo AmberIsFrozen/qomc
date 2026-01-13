@@ -80,12 +80,12 @@ public class ComponentUtil {
         MutableComponent valueName = Component.literal(trackedValue.key().getLastComponent()).withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(false));
 
         MutableComponent t3 = Component.literal(": ").withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(false));
-        MutableComponent t4 = formatValue(trackedValue, ValueType.fromValue(trackedValue)).withStyle(Style.EMPTY.withBold(false));
+        MutableComponent t4 = formatValue(trackedValue, ValueType.getType(trackedValue)).withStyle(Style.EMPTY.withBold(false));
         return text.append(valueName).append(t3).append(t4);
     }
 
     public static MutableComponent valueType(TrackedValue<?> trackedValue) {
-        ValueType valueType = ValueType.fromValue(trackedValue);
+        ValueType valueType = ValueType.getType(trackedValue);
         return Component.literal("Type: " + valueType.name).append(constraintsText(trackedValue.constraints()));
     }
 
@@ -143,7 +143,7 @@ public class ComponentUtil {
     public static MutableComponent currentValue(TrackedValue<?> trackedValue) {
         boolean valueIsDefault = Objects.equals(trackedValue.value(), trackedValue.getDefaultValue());
         MutableComponent headerText = Component.literal("Current Value: ");
-        MutableComponent valueText = formatValue(trackedValue, ValueType.fromValue(trackedValue));
+        MutableComponent valueText = formatValue(trackedValue, ValueType.getType(trackedValue));
 
         MutableComponent defaultText;
 
@@ -182,7 +182,7 @@ public class ComponentUtil {
         if(valueType == ValueType.LIST) {
             MutableComponent text = Component.literal("[").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
             ValueList<?> list = (ValueList<?>)trackedValue.value();
-            ValueType listValueType = ValueType.fromValue(trackedValue, list.getDefaultValue());
+            ValueType listValueType = ValueType.getChildType(trackedValue, list.getDefaultValue());
 
             for(int i = 0; i < list.size(); i++) {
                 Object innerValue = list.get(i);
@@ -199,7 +199,7 @@ public class ComponentUtil {
                 text.append("\n");
                 text.append("   ");
                 text.append(Component.literal(entry.getKey() + ": ").withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(true)));
-                text.append(formatSimpleValue(entry.getValue(), ValueType.fromValue(trackedValue, entry.getValue())));
+                text.append(formatSimpleValue(entry.getValue(), ValueType.getChildType(trackedValue, entry.getValue())));
             }
 
             text.append("\n]").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));

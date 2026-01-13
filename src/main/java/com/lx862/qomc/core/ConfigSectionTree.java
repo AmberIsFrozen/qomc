@@ -8,24 +8,24 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
-public final class ConfigSection {
+public final class ConfigSectionTree {
     private final List<TrackedValue<?>> fields;
-    private final HashMap<ValueKey, ConfigSection> sections;
+    private final HashMap<ValueKey, ConfigSectionTree> sections;
 
-    public ConfigSection(List<TrackedValue<?>> fields, HashMap<ValueKey, ConfigSection> sections) {
+    public ConfigSectionTree(List<TrackedValue<?>> fields, HashMap<ValueKey, ConfigSectionTree> sections) {
         this.fields = fields;
         this.sections = sections;
     }
 
-    public static ConfigSection create() {
-        return new ConfigSection(new ArrayList<>(), new HashMap<>(0));
+    public static ConfigSectionTree create() {
+        return new ConfigSectionTree(new ArrayList<>(), new HashMap<>(0));
     }
 
     public List<TrackedValue<?>> fields() {
         return this.fields;
     }
 
-    public HashMap<ValueKey, ConfigSection> sections() {
+    public HashMap<ValueKey, ConfigSectionTree> sections() {
         return this.sections;
     }
 
@@ -33,7 +33,7 @@ public final class ConfigSection {
     public boolean equals(Object o) {
         if (o == this) return true;
         if (o == null || o.getClass() != this.getClass()) return false;
-        ConfigSection other = (ConfigSection)o;
+        ConfigSectionTree other = (ConfigSectionTree)o;
         return Objects.equals(other.fields, this.fields) && Objects.equals(other.sections, this.sections);
     }
 
