@@ -41,7 +41,8 @@ public class QconfUtil {
     }
 
     public static String stringify(Object o) {
-        if(o instanceof ValueList<?> list) {
+        if(o instanceof ValueList<?>) {
+            ValueList<?> list = (ValueList<?>)o;
             StringBuilder sb = new StringBuilder("[");
 
             for(int i = 0; i < list.size(); i++) {
@@ -56,6 +57,4 @@ public class QconfUtil {
         }
         return o.toString();
     }
-
-    public record NameSet(String key, String displayName) {}
 }

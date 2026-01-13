@@ -5,23 +5,26 @@ import com.lx862.qomc.core.ValueType;
 import folk.sisby.kaleido.lib.quiltconfig.api.Config;
 import folk.sisby.kaleido.lib.quiltconfig.api.Constraint;
 import folk.sisby.kaleido.lib.quiltconfig.api.annotations.Comment;
+import folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.TrackedValue;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueList;
+import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueMap;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueTreeNode;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 
-public class McUtil {
+public class ComponentUtil {
     public static Component configFeedback(TrackedValue<?> value, ValueType valueType) {
         MutableComponent keyName = Component.literal(QconfUtil.getDisplayName(value)).withStyle(s -> s
                 .applyFormat(ChatFormatting.GREEN)
                 .withUnderlined(true));
 
-        MutableComponent text = Component.literal(" has been set to ").withStyle(s -> s.withUnderlined(false)).append(McUtil.formatValue(value, valueType));
+        MutableComponent text = Component.literal(" has been set to ").withStyle(s -> s.withUnderlined(false)).append(ComponentUtil.formatValue(value, valueType));
         return keyName.append(text);
     }
 
@@ -90,29 +93,30 @@ public class McUtil {
         MutableComponent finalText = Component.empty();
 
         for(Constraint<?> constraint : constraints) {
+            finalText.append("\n");
             String constraintStr;
-            if(constraint instanceof Constraint.Range<?> rangeConstraint) {
-                finalText.append("\n");
+            if(constraint instanceof Constraint.Range<?>) {
+                Constraint.Range<?> rangeConstraint = (Constraint.Range<?>)constraint;
                 boolean hasLowerConstraint = false;
                 boolean hasUpperConstraint = false;
 
                 Object lower = rangeConstraint.min();
                 Object upper = rangeConstraint.max();
 
-                if(lower instanceof Integer val) {
-                    hasLowerConstraint = val != Integer.MIN_VALUE;
+                if(lower instanceof Integer) {
+                    hasLowerConstraint = (Integer)lower != Integer.MIN_VALUE;
                     hasUpperConstraint = (Integer)upper != Integer.MAX_VALUE;
                 }
-                if(lower instanceof Double val) {
-                    hasLowerConstraint = val != Double.MIN_VALUE;
+                if(lower instanceof Double) {
+                    hasLowerConstraint = (Double) lower != Double.MIN_VALUE;
                     hasUpperConstraint = (Double) upper != Double.MAX_VALUE;
                 }
-                if(lower instanceof Float val) {
-                    hasLowerConstraint = val != Float.MIN_VALUE;
+                if(lower instanceof Float) {
+                    hasLowerConstraint = (Float)lower != Float.MIN_VALUE;
                     hasUpperConstraint = (Float)upper != Float.MAX_VALUE;
                 }
-                if(lower instanceof Long val) {
-                    hasLowerConstraint = val != Long.MIN_VALUE;
+                if(lower instanceof Long) {
+                    hasLowerConstraint = (Long)lower != Long.MIN_VALUE;
                     hasUpperConstraint = (Long)upper != Long.MAX_VALUE;
                 }
 
@@ -156,14 +160,18 @@ public class McUtil {
     public static MutableComponent configNodeChangeWarning(folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning changeWarning) {
         MutableComponent headerText = Component.literal("Note: ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW).withBold(true));
 
-        MutableComponent warningText =
-            switch(changeWarning.getType()) {
-                case Custom -> Component.literal(changeWarning.getCustomMessage());
-                case CustomTranslatable -> Component.translatable(changeWarning.getCustomMessage());
-                case RequiresRestart -> Component.literal("Restart is required for changes to apply");
-                case Experimental -> Component.literal("Experimental option, use with caution!");
-                case Unsafe -> Component.literal("Unsafe option, use at your own risk!");
-            };
+        MutableComponent warningText = null;
+        if(changeWarning.getType() == ChangeWarning.Type.Custom) {
+            return Component.literal(changeWarning.getCustomMessage());
+        } else if(changeWarning.getType() == ChangeWarning.Type.CustomTranslatable) {
+            return Component.translatable(changeWarning.getCustomMessage());
+        } else if(changeWarning.getType() == ChangeWarning.Type.RequiresRestart) {
+            return Component.literal("Restart is required for changes to apply");
+        } else if(changeWarning.getType() == ChangeWarning.Type.Experimental) {
+            return Component.literal("Experimental option, use with caution!");
+        } else if(changeWarning.getType() == ChangeWarning.Type.Unsafe) {
+            return Component.literal("Unsafe option, use at your own risk!");
+        }
 
         warningText.withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW).withBold(false));
         return Component.literal("\n").append(headerText).append(warningText);
@@ -182,6 +190,19 @@ public class McUtil {
                 if(i != list.size()-1) text.append(Component.literal(", ").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE)));
             }
             text.append("]").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
+            return text;
+        } else if(valueType == ValueType.MAP) {
+            MutableComponent text = Component.literal("[").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
+            ValueMap<?> map = (ValueMap<?>)trackedValue.value();
+
+            for(Map.Entry<String, ?> entry : map.entrySet()) {
+                text.append("\n");
+                text.append("   ");
+                text.append(Component.literal(entry.getKey() + ": ").withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(true)));
+                text.append(formatSimpleValue(entry.getValue(), ValueType.fromValue(trackedValue, entry.getValue())));
+            }
+
+            text.append("\n]").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
             return text;
         }
 

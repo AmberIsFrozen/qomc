@@ -4,7 +4,8 @@ import com.lx862.qomc.core.ConfigTree;
 import com.lx862.qomc.core.ConfigSection;
 import com.lx862.qomc.core.ValueType;
 import com.lx862.qomc.util.ColorUtil;
-import com.lx862.qomc.util.McUtil;
+import com.lx862.qomc.util.ComponentUtil;
+import com.lx862.qomc.util.ModInfo;
 import com.lx862.qomc.util.QconfUtil;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.*;
@@ -20,7 +21,6 @@ import folk.sisby.kaleido.lib.quiltconfig.api.values.TrackedValue;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueKey;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueList;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueTreeNode;
-import net.fabricmc.loader.api.metadata.ModMetadata;
 import net.minecraft.ChatFormatting;
 import net.minecraft.commands.CommandRuntimeException;
 import net.minecraft.commands.CommandSourceStack;
@@ -32,8 +32,8 @@ import java.util.*;
 import java.util.function.BiFunction;
 
 public class ConfigCommands {
-    public static LiteralArgumentBuilder<CommandSourceStack> buildModNode(ModMetadata modMetadata, List<Config> configs, CommandDispatcher<CommandSourceStack> ctx) {
-        LiteralArgumentBuilder<CommandSourceStack> rootNode = Commands.literal(modMetadata.getId() + "Config");
+    public static LiteralArgumentBuilder<CommandSourceStack> buildModNode(ModInfo modInfo, List<Config> configs, CommandDispatcher<CommandSourceStack> ctx) {
+        LiteralArgumentBuilder<CommandSourceStack> rootNode = Commands.literal(modInfo.id() + "Config");
         rootNode.requires(serverCommandSource -> serverCommandSource.hasPermission(4));
 
         for(Config config : configs) {
@@ -65,7 +65,7 @@ public class ConfigCommands {
         }
 
         for(Map.Entry<ValueKey, ConfigSection> fieldEntriesEntry : configTree.rootSection().sections().entrySet()) {
-            var section = buildSectionNode(config, fieldEntriesEntry.getKey(), fieldEntriesEntry.getValue());
+            LiteralArgumentBuilder<CommandSourceStack> section = buildSectionNode(config, fieldEntriesEntry.getKey(), fieldEntriesEntry.getValue());
             nodes.add(section);
         }
         return nodes;
@@ -77,25 +77,26 @@ public class ConfigCommands {
         sectionNode.executes(ctx -> {
             ValueTreeNode sectionConfigNode = config.getNode(sectionKey);
 
-            Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeBreadcrumb(config, sectionConfigNode), false);
-            Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeComments(sectionConfigNode), false);
-            Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
+            Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeBreadcrumb(config, sectionConfigNode), false);
+            Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeComments(sectionConfigNode), false);
+            Platform.sendFeedback(ctx.getSource(), Component::empty, false);
 
             if(sectionConfigNode.hasMetadata(ChangeWarning.TYPE)) {
-                Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeChangeWarning(sectionConfigNode.metadata(ChangeWarning.TYPE)), false);
-                Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
+                Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeChangeWarning(sectionConfigNode.metadata(ChangeWarning.TYPE)), false);
+                Platform.sendFeedback(ctx.getSource(), Component::empty, false);
             }
 
             for(TrackedValue<?> trackedValue : configSection.fields()) {
                 String command = buildCommandString(ctx) + trackedValue.key().getLastComponent();
 
-                Platform.sendFeedback(ctx.getSource(), () -> McUtil.valueOverview(trackedValue)
+                Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.valueOverview(trackedValue)
                         .withStyle(s ->
-                            s.withHoverEvent(Platform.hoverEventText(McUtil.configNodeTooltip(trackedValue)))
+                            s.withHoverEvent(Platform.hoverEventText(ComponentUtil.configNodeTooltip(trackedValue)))
                             .withClickEvent(Platform.clickEventSuggestCommand(command))
                         ), false);
             }
 
+            Platform.sendFeedback(ctx.getSource(), Component::empty, false);
             return 1;
         });
 
@@ -114,17 +115,17 @@ public class ConfigCommands {
     public static <T> LiteralArgumentBuilder<CommandSourceStack> buildTrackedValueNode(Config config, TrackedValue<T> trackedValue) {
         LiteralArgumentBuilder<CommandSourceStack> fieldNode = Commands.literal(trackedValue.key().getLastComponent());
         fieldNode.executes(ctx -> {
-            Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeBreadcrumb(config, trackedValue), false);
-            Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeComments(trackedValue), false);
+            Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeBreadcrumb(config, trackedValue), false);
+            Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeComments(trackedValue), false);
 
-            Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
-            Platform.sendFeedback(ctx.getSource(), () -> McUtil.currentValue(trackedValue)
-                    .withStyle(s -> s.withHoverEvent(Platform.hoverEventText(McUtil.valueType(trackedValue)))), false);
-            Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
+            Platform.sendFeedback(ctx.getSource(), Component::empty, false);
+            Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.currentValue(trackedValue)
+                    .withStyle(s -> s.withHoverEvent(Platform.hoverEventText(ComponentUtil.valueType(trackedValue)))), false);
+            Platform.sendFeedback(ctx.getSource(), Component::empty, false);
 
             if(trackedValue.hasMetadata(ChangeWarning.TYPE)) {
-                Platform.sendFeedback(ctx.getSource(), () -> McUtil.configNodeChangeWarning(trackedValue.metadata(ChangeWarning.TYPE)), false);
-                Platform.sendFeedback(ctx.getSource(), () -> Component.empty(), false);
+                Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeChangeWarning(trackedValue.metadata(ChangeWarning.TYPE)), false);
+                Platform.sendFeedback(ctx.getSource(), Component::empty, false);
             }
 
             MutableComponent changeText;
@@ -140,6 +141,8 @@ public class ConfigCommands {
             }
 
             Platform.sendFeedback(ctx.getSource(), () -> changeText, false);
+
+            Platform.sendFeedback(ctx.getSource(), Component::empty, false);
             return 1;
         });
 
@@ -184,7 +187,7 @@ public class ConfigCommands {
                     .executes(ctx -> callback.apply(ctx, (T)(Boolean)BoolArgumentType.getBool(ctx, "boolean"))));
         }
         if(valueType == ValueType.STRING) {
-            arguments.add(Commands.argument("string", StringArgumentType.greedyString())
+            arguments.add(Commands.argument("string", StringArgumentType.string())
                     .executes(ctx -> callback.apply(ctx, (T)StringArgumentType.getString(ctx, "string"))));
         }
         if(valueType == ValueType.COLOR_RGB) {
@@ -219,7 +222,7 @@ public class ConfigCommands {
         }
         if(valueType == ValueType.ENUM) {
             Enum<?>[] enumValues = (Enum[])value.getDefaultValue().getClass().getEnumConstants();
-            for(var enumValue : enumValues) {
+            for(Enum<?> enumValue : enumValues) {
                 String enumName = enumValue.name();
                 arguments.add(
                     Commands.literal(enumName)
@@ -242,7 +245,8 @@ public class ConfigCommands {
             for(ArgumentBuilder<CommandSourceStack, ?> listNode : buildValueNode(value, listContentValueType, (ctx, newValue) -> {
                 return configRemoveList(ctx, listTrackedValue, newValue);
             })) {
-                if(listNode instanceof RequiredArgumentBuilder<?, ?> requiredArgumentBuilder) {
+                if(listNode instanceof RequiredArgumentBuilder<?, ?>) {
+                    RequiredArgumentBuilder<?, ?> requiredArgumentBuilder = (RequiredArgumentBuilder<?, ?>)listNode;
                     requiredArgumentBuilder.suggests((commandContext, suggestionsBuilder) -> {
                         for(Object item : listTrackedValue.value()) {
                             String str = StringArgumentType.escapeIfRequired(item.toString());
@@ -271,7 +275,7 @@ public class ConfigCommands {
 
     private static <T> int configSetValue(CommandContext<CommandSourceStack> ctx, TrackedValue<T> trackedValue, ValueType valueType, T newValue) {
         setValue(trackedValue, newValue);
-        Platform.sendFeedback(ctx.getSource(), () -> McUtil.configFeedback(trackedValue, valueType), false);
+        Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configFeedback(trackedValue, valueType), false);
         return 1;
     }
 
@@ -295,7 +299,7 @@ public class ConfigCommands {
         setValue(value, newList);
 
         Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Added " + QconfUtil.stringify(item) + " to list " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(McUtil.formatValue(value, ValueType.LIST)), false);
+        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.LIST)), false);
         return 1;
     }
 
@@ -308,7 +312,7 @@ public class ConfigCommands {
         setValue(value, value.value());
 
         Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed " + QconfUtil.stringify(item) + " from list " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(McUtil.formatValue(value, ValueType.LIST)), false);
+        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.LIST)), false);
         return 1;
     }
 

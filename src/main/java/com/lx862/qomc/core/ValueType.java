@@ -3,7 +3,9 @@ package com.lx862.qomc.core;
 import folk.sisby.kaleido.lib.quiltconfig.api.Constraint;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.TrackedValue;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueList;
+import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueMap;
 
+import java.util.Arrays;
 import java.util.List;
 
 public enum ValueType {
@@ -17,16 +19,17 @@ public enum ValueType {
     COLOR_RGB("Color (RGB)"),
     COLOR_ARGB("Color (ARGB)"),
     LIST("List"),
+    MAP("Map (Key-Value)"),
     UNKNOWN("Unknown");
 
-    public static final List<String> RGB_CONSTRAINTS = List.of(
+    public static final List<String> RGB_CONSTRAINTS = Arrays.asList(
             "matches r'#[0-9a-fA-F]{6}'",
             "matches r'#[0-9A-Fa-f]{6}'",
             "matches r'#[a-fA-F0-9]{6}'",
             "matches r'#[A-Fa-f0-9]{6}'"
     );
 
-    public static final List<String> ARGB_CONSTRAINTS = List.of(
+    public static final List<String> ARGB_CONSTRAINTS = Arrays.asList(
             "matches r'#[0-9a-fA-F]{8}'",
             "matches r'#[0-9A-Fa-f]{8}'",
             "matches r'#[a-fA-F0-9]{8}'",
@@ -76,6 +79,7 @@ public enum ValueType {
         if(obj instanceof Double) return DOUBLE;
         if(obj instanceof Enum<?>) return ENUM;
         if(obj instanceof ValueList<?>) return LIST;
+        if(obj instanceof ValueMap<?>) return MAP;
         return UNKNOWN;
     }
 }
