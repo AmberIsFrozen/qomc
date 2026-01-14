@@ -71,7 +71,7 @@ public class ComponentUtil {
         if(node instanceof ValueTreeNode.Section) {
             return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.GREEN).append(configNodeComments(node).stream().reduce(Component.empty(), (acc, e) -> acc.append("\n").append(e)));
         } else {
-            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.WHITE).withStyle(ChatFormatting.BOLD).append("\n").append(configNodeComments(node).stream().reduce(Component.empty(), (acc, e) -> acc.append("\n").append(e)));
+            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.WHITE).withStyle(ChatFormatting.BOLD).append(configNodeComments(node).stream().reduce(Component.empty(), (acc, e) -> acc.append("\n").append(e)));
         }
     }
 

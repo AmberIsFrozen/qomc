@@ -59,21 +59,19 @@ public class ConfigCommands {
         }
 
         for(Map.Entry<ValueKey, ConfigSectionTree> section : configTree.rootSection().sections().entrySet()) {
-            LiteralArgumentBuilder<CommandSourceStack> sectionNode = buildSectionNode(config, section.getKey(), section.getValue());
+            LiteralArgumentBuilder<CommandSourceStack> sectionNode = buildSectionNode(config, section.getValue());
             nodes.add(sectionNode);
         }
         return nodes;
     }
 
-    private static LiteralArgumentBuilder<CommandSourceStack> buildSectionNode(Config config, ValueKey sectionKey, ConfigSectionTree sectionTree) {
-        ValueTreeNode configSection = config.getNode(sectionKey);
-
-        LiteralArgumentBuilder<CommandSourceStack> sectionNode = Commands.literal("[" + QconfUtil.getSerializedName(configSection) + "]")
-        .executes(ctx -> printSection(ctx, config, configSection, sectionTree));
+    private static LiteralArgumentBuilder<CommandSourceStack> buildSectionNode(Config config, ConfigSectionTree sectionTree) {
+        LiteralArgumentBuilder<CommandSourceStack> sectionNode = Commands.literal("[" + QconfUtil.getSerializedName(sectionTree.node()) + "]")
+        .executes(ctx -> printSection(ctx, config, sectionTree.node(), sectionTree));
 
         sectionTree.fields().forEach(field -> sectionNode.then(buildFieldNode(config, field)));
-        sectionTree.sections().forEach(
-            (subSectionKey, subSection) -> sectionNode.then(buildSectionNode(config, subSectionKey, subSection))
+        sectionTree.sections().values().forEach(
+            (subSection) -> sectionNode.then(buildSectionNode(config, subSection))
         );
 
         return sectionNode;
