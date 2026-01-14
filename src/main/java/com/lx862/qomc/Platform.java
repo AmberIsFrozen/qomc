@@ -10,6 +10,7 @@ import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
 
+import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -39,5 +40,9 @@ public class Platform {
     public static ModInfo getModInfo(String id) {
         ModMetadata modMetadata = FabricLoader.getInstance().getModContainer(id).get().getMetadata();
         return new ModInfo(modMetadata.getName(), modMetadata.getDescription(), modMetadata.getId());
+    }
+
+    public static Path getConfigPath() {
+        return FabricLoader.getInstance().getConfigDir();
     }
 }

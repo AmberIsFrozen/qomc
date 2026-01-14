@@ -3,6 +3,7 @@ package com.lx862.qomc;
 import com.lx862.qomc.core.ConfigTree;
 import com.lx862.qomc.core.ConfigSectionTree;
 import com.lx862.qomc.core.ValueType;
+import com.lx862.qomc.exception.ConfigFailException;
 import com.lx862.qomc.util.ColorUtil;
 import com.lx862.qomc.util.ComponentUtil;
 import com.lx862.qomc.util.ModInfo;
@@ -19,13 +20,13 @@ import folk.sisby.kaleido.lib.quiltconfig.api.Constraint;
 import folk.sisby.kaleido.lib.quiltconfig.api.annotations.ChangeWarning;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.*;
 import net.minecraft.ChatFormatting;
-import net.minecraft.commands.CommandRuntimeException;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ConfigCommands {
     public static LiteralArgumentBuilder<CommandSourceStack> buildModNode(ModInfo modInfo, List<Config> configs, CommandDispatcher<CommandSourceStack> ctx) {
@@ -303,17 +304,23 @@ public class ConfigCommands {
     }
 
     private static <T> int configSetValue(CommandContext<CommandSourceStack> ctx, TrackedValue<T> trackedValue, ValueType valueType, T newValue) {
-        setValue(trackedValue, newValue);
-        Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configFeedback(trackedValue, valueType), false);
-        return 1;
+        try {
+            setValue(trackedValue, newValue);
+            Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configFeedback(trackedValue, valueType), false);
+            return 1;
+        } catch (ConfigFailException exception) {
+            Platform.sendFeedback(ctx.getSource(), exception::component, false);
+            return 0;
+        }
     }
 
     private static int configSetColorHex(CommandContext<CommandSourceStack> ctx, TrackedValue<String> trackedValue, String input, boolean isARGB) {
-        testConstraints(trackedValue, input);
+
         try {
             return configSetValue(ctx, trackedValue, isARGB ? ValueType.COLOR_ARGB : ValueType.COLOR_RGB, ColorUtil.colorToHex(ColorUtil.toArgbColor(input, isARGB), isARGB));
         } catch (NumberFormatException e) {
-            throw new CommandRuntimeException(Component.literal("Invalid RGB Hex color format: " + input));
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Invalid RGB Hex color format: " + input).withStyle(ChatFormatting.RED), false);
+            return 0;
         }
     }
 
@@ -324,12 +331,15 @@ public class ConfigCommands {
     private static <T> int configAddList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item) {
         ValueList<T> newList = (ValueList<T>) value.value().copy();
         newList.add(item);
-        testConstraints(value, newList);
-        setValue(value, newList);
-
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Added " + QconfUtil.stringify(item) + " to list " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.LIST)), false);
-        return 1;
+        try {
+            setValue(value, newList);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Added " + QconfUtil.stringify(item) + " to list " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.LIST)), false);
+            return 1;
+        } catch (ConfigFailException exception) {
+            Platform.sendFeedback(ctx.getSource(), exception::component, false);
+            return 0;
+        }
     }
 
     private static <T> int configRemoveList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item) {
@@ -338,22 +348,33 @@ public class ConfigCommands {
             return 0;
         }
         value.value().remove(item);
-        setValue(value, value.value());
 
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed " + QconfUtil.stringify(item) + " from list " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.LIST)), false);
-        return 1;
+        try {
+            setValue(value, value.value());
+
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed " + QconfUtil.stringify(item) + " from list " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.LIST)), false);
+            return 1;
+        } catch (ConfigFailException exception) {
+            Platform.sendFeedback(ctx.getSource(), exception::component, false);
+            return 0;
+        }
     }
 
     private static <T> int configSetMap(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueMap<T>> value, String key, T item) {
         ValueMap<T> newMap = (ValueMap<T>) value.value().copy();
         newMap.put(key, item);
-        testConstraints(value, newMap);
-        setValue(value, newMap);
 
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Set " + key + " to " + QconfUtil.stringify(item) + ".").withStyle(ChatFormatting.GREEN), false);
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.MAP)), false);
-        return 1;
+        try {
+            setValue(value, newMap);
+
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Set " + key + " to " + QconfUtil.stringify(item) + ".").withStyle(ChatFormatting.GREEN), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.MAP)), false);
+            return 1;
+        } catch (ConfigFailException exception) {
+            Platform.sendFeedback(ctx.getSource(), exception::component, false);
+            return 0;
+        }
     }
 
     private static <T> int configRemoveMap(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueMap<T>> value, String key) {
@@ -362,24 +383,34 @@ public class ConfigCommands {
             return 0;
         }
         value.value().remove(key);
-        setValue(value, value.value());
 
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed " + key + " from map " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.MAP)), false);
-        return 1;
+        try {
+            setValue(value, value.value());
+
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed " + key + " from map " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.MAP)), false);
+            return 1;
+        } catch (ConfigFailException exception) {
+            Platform.sendFeedback(ctx.getSource(), exception::component, false);
+            return 0;
+        }
     }
 
-    private static <T> void testConstraints(TrackedValue<T> trackedValue, T newValue) {
+    private static <T> void testConstraints(TrackedValue<T> trackedValue, T newValue) throws ConfigFailException {
+        MutableComponent text = Component.literal("New value does not meet constraint(s): ");
+        AtomicBoolean constraintFailed = new AtomicBoolean(false);
         trackedValue.checkForFailingConstraints(newValue).ifPresent(errorMessages -> {
-            MutableComponent text = Component.literal("New value does not meet constraint(s): ");
             errorMessages.forEach(errMsg -> {
                 text.append(Component.literal("\n- " + errMsg));
             });
-            throw new CommandRuntimeException(text);
+            constraintFailed.set(true);
         });
+        if(constraintFailed.get()) {
+            throw new ConfigFailException(text);
+        }
     }
 
-    private static <T> void setValue(TrackedValue<T> trackedValue, T newValue) {
+    private static <T> void setValue(TrackedValue<T> trackedValue, T newValue) throws ConfigFailException {
         testConstraints(trackedValue, newValue);
         trackedValue.setValue(newValue);
     }
