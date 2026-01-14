@@ -66,8 +66,10 @@ public class ConfigCommands {
     }
 
     private static LiteralArgumentBuilder<CommandSourceStack> buildSectionNode(Config config, ValueKey sectionKey, ConfigSectionTree sectionTree) {
-        LiteralArgumentBuilder<CommandSourceStack> sectionNode = Commands.literal("[" + sectionKey.getLastComponent() + "]")
-        .executes(ctx -> printSection(ctx, config, sectionKey, sectionTree));
+        ValueTreeNode configSection = config.getNode(sectionKey);
+
+        LiteralArgumentBuilder<CommandSourceStack> sectionNode = Commands.literal("[" + QconfUtil.getSerializedName(configSection) + "]")
+        .executes(ctx -> printSection(ctx, config, configSection, sectionTree));
 
         sectionTree.fields().forEach(field -> sectionNode.then(buildFieldNode(config, field)));
         sectionTree.sections().forEach(
@@ -78,7 +80,7 @@ public class ConfigCommands {
     }
 
     private static <T> LiteralArgumentBuilder<CommandSourceStack> buildFieldNode(Config config, TrackedValue<T> trackedValue) {
-        LiteralArgumentBuilder<CommandSourceStack> fieldNode = Commands.literal(trackedValue.key().getLastComponent())
+        LiteralArgumentBuilder<CommandSourceStack> fieldNode = Commands.literal(QconfUtil.getSerializedName(trackedValue))
         .executes(ctx -> printField(ctx, config, trackedValue));
 
         ValueType valueType = ValueType.getType(trackedValue);
@@ -277,9 +279,7 @@ public class ConfigCommands {
         return 1;
     }
 
-    private static int printSection(CommandContext<CommandSourceStack> ctx, Config config, ValueKey sectionKey, ConfigSectionTree sectionTree) {
-        ValueTreeNode configSection = config.getNode(sectionKey);
-
+    private static int printSection(CommandContext<CommandSourceStack> ctx, Config config, ValueTreeNode configSection, ConfigSectionTree sectionTree) {
         Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeBreadcrumb(config, configSection), false);
         Platform.sendFeedbacks(ctx.getSource(), ComponentUtil.configNodeComments(configSection), false);
         Platform.sendFeedback(ctx.getSource(), Component::empty, false);
@@ -290,7 +290,7 @@ public class ConfigCommands {
         }
 
         for(TrackedValue<?> trackedValue : sectionTree.fields()) {
-            String command = commandToString(ctx) + trackedValue.key().getLastComponent();
+            String command = commandToString(ctx) + QconfUtil.getSerializedName(trackedValue);
 
             Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.valueOverview(trackedValue)
                     .withStyle(s ->

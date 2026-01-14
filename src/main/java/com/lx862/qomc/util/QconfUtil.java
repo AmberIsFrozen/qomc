@@ -3,6 +3,7 @@ package com.lx862.qomc.util;
 import folk.sisby.kaleido.lib.quiltconfig.api.Config;
 import folk.sisby.kaleido.lib.quiltconfig.api.annotations.DisplayName;
 import folk.sisby.kaleido.lib.quiltconfig.api.annotations.DisplayNameConvention;
+import folk.sisby.kaleido.lib.quiltconfig.api.annotations.SerializedNameConvention;
 import folk.sisby.kaleido.lib.quiltconfig.api.metadata.MetadataContainer;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueKey;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueList;
@@ -24,8 +25,16 @@ public class QconfUtil {
         return new ValueKeyImpl(keys);
     }
 
+    public static String getSerializedName(ValueTreeNode node) {
+        if(node.hasMetadata(SerializedNameConvention.TYPE)) {
+            return node.metadata(SerializedNameConvention.TYPE).coerce(node.key().getLastComponent());
+        } else {
+            return node.key().getLastComponent();
+        }
+    }
+
     public static String getDisplayName(ValueTreeNode node) {
-        return getDisplayName(node, node.key().getLastComponent());
+        return getDisplayName(node, getSerializedName(node));
     }
 
     public static String getDisplayName(MetadataContainer node, String key) {
