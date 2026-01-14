@@ -70,9 +70,7 @@ public class ConfigCommands {
         .executes(ctx -> printSection(ctx, config, sectionTree.node(), sectionTree));
 
         sectionTree.fields().forEach(field -> sectionNode.then(buildFieldNode(config, field)));
-        sectionTree.sections().values().forEach(
-            (subSection) -> sectionNode.then(buildSectionNode(config, subSection))
-        );
+        sectionTree.sections().values().forEach((subSection) -> sectionNode.then(buildSectionNode(config, subSection)));
 
         return sectionNode;
     }
@@ -370,7 +368,7 @@ public class ConfigCommands {
         try {
             setValue(value, newMap);
 
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Set \"" + key + "\" to ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(" in map!"), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("\"" + key + "\" set to ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(" in map!"), false);
             Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.MAP)), false);
             return 1;
         } catch (ConfigFailException exception) {

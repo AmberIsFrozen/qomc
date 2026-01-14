@@ -9,15 +9,14 @@ import folk.sisby.kaleido.lib.quiltconfig.api.annotations.SerializedNameConventi
 import folk.sisby.kaleido.lib.quiltconfig.api.metadata.NamingSchemes;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.TrackedValue;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueList;
-import folk.sisby.kaleido.lib.quiltconfig.impl.values.ValueListImpl;
 import folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning.Type;
-
-import java.util.Arrays;
+import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueMap;
 
 @SerializedNameConvention(NamingSchemes.SNAKE_CASE)
 public class DemoConfig extends ReflectiveConfig {
     private static final DemoConfig INSTANCE = DemoConfig.createToml(Platform.getConfigPath(), "qomc", "demo", DemoConfig.class);
 
+    @Comment("Demonstration of the different object type supported by QoMC")
     public final FieldType fieldType = new FieldType();
 
     @Comment("Demonstration of more special/specific pattern/fields")
@@ -32,7 +31,15 @@ public class DemoConfig extends ReflectiveConfig {
         public final TrackedValue<String> stringValue = value("Hello World");
 
         @Matches("#[0-9A-Fa-f]{6}")
-        public final TrackedValue<ValueList<String>> colorListValue = value(new ValueListImpl<>("", Arrays.asList("#00FF00", "#FFFF00")));
+        @Comment("A string value, with a @Matches annotation of \"#[0-9A-Fa-f]{6}\", which will be picked up by QoMC as a RGB HEX color.")
+        public final TrackedValue<String> rgbColorValue = value("#00FFFF");
+
+        @Matches("#[0-9A-Fa-f]{6}")
+        @Comment("A ValueList containing a list of string. The ValueList have a @Matches annotation of \"#[0-9A-Fa-f]{6}\", which will be picked up by QoMC as a RGB HEX color.")
+        public final TrackedValue<ValueList<String>> colorListValue = list("", "#00FF00", "#FFFF00");
+
+        @Comment("A String-Enum list about various addon content type for Minecraft.")
+        public final TrackedValue<ValueMap<ContentType>> enumListValue = map(ContentType.MOD).put("QoMC", ContentType.MOD).put("Programmer Art", ContentType.RESOURCE_PACK).put("BSL Shaders", ContentType.SHADERS).put("Blahaj", ContentType.PLUSH).build();
     }
 
     public static final class Special extends Section {
@@ -43,34 +50,42 @@ public class DemoConfig extends ReflectiveConfig {
         @Comment("A list of values making use of the @ChangeWarning annotations, prompting a remark for the user.")
         @Comment("Oh and this is a nested section!")
         public final ChangeWarnings changeWarnings = new ChangeWarnings();
+    }
 
-        public static final class ChangeWarnings extends Section {
+    public static final class ChangeWarnings extends Section {
 
-            @Comment("The \"RequiresRestart\" type marks that a field would only be effective after a game restart.")
-            @ChangeWarning(Type.RequiresRestart)
-            public final TrackedValue<Boolean> requiresRestart = value(true);
+        @Comment("The \"RequiresRestart\" type marks that a field would only be effective after a game restart.")
+        @ChangeWarning(Type.RequiresRestart)
+        public final TrackedValue<Boolean> requiresRestart = value(true);
 
-            @Comment("The \"Unsafe\" type marks that this option is not safe to be turned on.")
-            @Comment("i.e. Things may go wrong with this option turned on, it is known and that's by design.")
-            @ChangeWarning(Type.Unsafe)
-            public final TrackedValue<Boolean> unsafe = value(true);
+        @Comment("The \"Unsafe\" type marks that this option is not safe to be turned on.")
+        @Comment("i.e. Things may go wrong with this option turned on, it is known and that's by design.")
+        @ChangeWarning(Type.Unsafe)
+        public final TrackedValue<Boolean> unsafe = value(true);
 
-            @Comment("The \"Experimental\" type marks that this option is experimental and might cause issues.")
-            @ChangeWarning(Type.Experimental)
-            public final TrackedValue<Boolean> experimental = value(true);
+        @Comment("The \"Experimental\" type marks that this option is experimental and might cause issues.")
+        @ChangeWarning(Type.Experimental)
+        public final TrackedValue<Boolean> experimental = value(true);
 
-            @Comment("The \"Custom\" type allows you to enter a (non-translatable) warning message of your choice to prompt the user.")
-            @ChangeWarning(value = Type.Custom, customMessage = "Rawr, look behind you!")
-            public final TrackedValue<Boolean> custom = value(true);
+        @Comment("The \"Custom\" type allows you to enter a (non-translatable) warning message of your choice to prompt the user.")
+        @ChangeWarning(value = Type.Custom, customMessage = "Rawr, look behind you!")
+        public final TrackedValue<Boolean> custom = value(true);
 
-            @Comment("The \"CustomTranslatable\" type allows you to enter a translatable warning message of your choice to prompt the user.")
-            @ChangeWarning(value = Type.CustomTranslatable, customMessage = "chat.link.warning")
-            public final TrackedValue<Boolean> customTranslatable = value(true);
-        }
+        @Comment("The \"CustomTranslatable\" type allows you to enter a translatable warning message of your choice to prompt the user.")
+        @ChangeWarning(value = Type.CustomTranslatable, customMessage = "chat.link.warning")
+        public final TrackedValue<Boolean> customTranslatable = value(true);
     }
 
     public static void init() {
         // Static initialization
         INSTANCE.special.overridenValue.setOverride(8);
+    }
+
+    public enum ContentType {
+        MOD,
+        RESOURCE_PACK,
+        DATAPACK,
+        SHADERS,
+        PLUSH
     }
 }

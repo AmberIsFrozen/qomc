@@ -68,9 +68,11 @@ public class ComponentUtil {
 
     public static MutableComponent configNodeTooltip(ValueTreeNode node) {
         if(node instanceof ValueTreeNode.Section) {
-            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.GREEN).append(configNodeComments(node).stream().reduce(Component.empty(), (acc, e) -> acc.append("\n").append(e)));
+            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.GREEN)
+                    .append(configNodeComments(node).stream().reduce(Component.empty(), (acc, e) -> acc.append("\n").append(e)).withStyle(s -> s.withBold(false)));
         } else {
-            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.WHITE).withStyle(ChatFormatting.BOLD).append(configNodeComments(node).stream().reduce(Component.empty(), (acc, e) -> acc.append("\n").append(e)));
+            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.WHITE).withStyle(ChatFormatting.BOLD)
+                    .append(configNodeComments(node).stream().reduce(Component.empty(), (acc, e) -> acc.append("\n").append(e)).withStyle(s -> s.withBold(false)));
         }
     }
 
@@ -205,18 +207,18 @@ public class ComponentUtil {
             text.append("]").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
             return text;
         } else if(valueType == ValueType.MAP) {
-            MutableComponent text = Component.literal("[").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
+            MutableComponent text = Component.literal("[").withStyle(ChatFormatting.WHITE);
             ValueMap<?> map = (ValueMap<?>)value;
             ValueType childType = ValueType.getType(trackedValue, map.getDefaultValue());
 
             for(Map.Entry<String, ?> entry : map.entrySet()) {
                 text.append("\n");
-                text.append("   ");
-                text.append(Component.literal(entry.getKey() + ": ").withStyle(s -> s.withColor(ChatFormatting.AQUA)));
-                text.append(formatSimpleValue(entry.getValue(), childType));
+                text.append(Component.literal("   ").withStyle(s -> s.withUnderlined(false))); // Indentation
+                text.append(Component.literal(entry.getKey() + ": ").withStyle(s -> s.withColor(ChatFormatting.AQUA).withUnderlined(false)));
+                text.append(formatSimpleValue(entry.getValue(), childType).withStyle(s -> s.withUnderlined(false)));
             }
 
-            text.append("\n]").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
+            text.append("\n]").withStyle(ChatFormatting.WHITE);
             return text;
         }
 
