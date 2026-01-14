@@ -162,19 +162,19 @@ public class ComponentUtil {
 
         MutableComponent warningText = null;
         if(changeWarning.getType() == ChangeWarning.Type.Custom) {
-            return Component.literal(changeWarning.getCustomMessage());
+            warningText = Component.literal(changeWarning.getCustomMessage());
         } else if(changeWarning.getType() == ChangeWarning.Type.CustomTranslatable) {
-            return Component.translatable(changeWarning.getCustomMessage());
+            warningText = Component.translatable(changeWarning.getCustomMessage());
         } else if(changeWarning.getType() == ChangeWarning.Type.RequiresRestart) {
-            return Component.literal("Restart is required for changes to apply");
+            warningText = Component.literal("Restart is required for changes to apply");
         } else if(changeWarning.getType() == ChangeWarning.Type.Experimental) {
-            return Component.literal("Experimental option, use with caution!");
+            warningText = Component.literal("Experimental option, use with caution!");
         } else if(changeWarning.getType() == ChangeWarning.Type.Unsafe) {
-            return Component.literal("Unsafe option, use at your own risk!");
+            warningText = Component.literal("Unsafe option, use at your own risk!");
         }
 
         warningText.withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW).withBold(false));
-        return Component.literal("\n").append(headerText).append(warningText);
+        return headerText.append(warningText);
     }
 
     public static MutableComponent formatValue(TrackedValue<?> trackedValue, ValueType valueType) {
