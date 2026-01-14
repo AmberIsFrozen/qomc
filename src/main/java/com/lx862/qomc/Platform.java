@@ -9,14 +9,25 @@ import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.ClickEvent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.HoverEvent;
+import net.minecraft.network.chat.MutableComponent;
 
 import java.nio.file.Path;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class Platform {
+    public static void sendFeedbacks(CommandSourceStack source, Iterable<MutableComponent> texts, boolean broadcastToOp) {
+        for (Component component : texts) {
+            source.sendSuccess(() -> component, broadcastToOp);
+        }
+    }
+
     public static void sendFeedback(CommandSourceStack source, Supplier<Component> getText, boolean broadcastToOp) {
         source.sendSuccess(getText, broadcastToOp);
+    }
+
+    public static void sendFailure(CommandSourceStack source, Component getText) {
+        source.sendFailure(getText);
     }
 
     public static HoverEvent hoverEventText(Component text) {

@@ -10,9 +10,9 @@ import folk.sisby.kaleido.lib.quiltconfig.api.values.TrackedValue;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueList;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueMap;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueTreeNode;
-import java.util.Locale;
-import java.util.Map;
-import java.util.Objects;
+
+import java.util.*;
+
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
@@ -55,23 +55,23 @@ public class ComponentUtil {
         return fieldHeader;
     }
 
-    public static MutableComponent configNodeComments(ValueTreeNode node) {
-        MutableComponent text = Component.empty().withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY).withBold(false));
+    public static List<MutableComponent> configNodeComments(ValueTreeNode node) {
+        List<MutableComponent> components = new ArrayList<>();
         if(node.hasMetadata(Comment.TYPE)) {
             boolean prependNewLine = false;
             for(String comment : node.metadata(Comment.TYPE)) {
-                text.append(Component.literal((prependNewLine ? "\n" : "") + comment));
+                components.add(Component.literal((prependNewLine ? "\n" : "") + comment).withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY).withBold(false)));
                 prependNewLine = true;
             }
         }
-        return text;
+        return components;
     }
 
     public static MutableComponent configNodeTooltip(ValueTreeNode node) {
         if(node instanceof ValueTreeNode.Section) {
-            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.GREEN).append("\n").append(configNodeComments(node));
+            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.GREEN).append(configNodeComments(node).stream().reduce(Component.empty(), (acc, e) -> acc.append("\n").append(e)));
         } else {
-            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.WHITE).withStyle(ChatFormatting.BOLD).append("\n").append(configNodeComments(node));
+            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.WHITE).withStyle(ChatFormatting.BOLD).append("\n").append(configNodeComments(node).stream().reduce(Component.empty(), (acc, e) -> acc.append("\n").append(e)));
         }
     }
 

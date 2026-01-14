@@ -248,7 +248,7 @@ public class ConfigCommands {
 
     private static int printField(CommandContext<CommandSourceStack> ctx, Config config, TrackedValue<?> trackedValue) {
         Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeBreadcrumb(config, trackedValue), false);
-        Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeComments(trackedValue), false);
+        Platform.sendFeedbacks(ctx.getSource(), ComponentUtil.configNodeComments(trackedValue), false);
 
         Platform.sendFeedback(ctx.getSource(), Component::empty, false);
         Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.currentValue(trackedValue)
@@ -281,7 +281,7 @@ public class ConfigCommands {
         ValueTreeNode configSection = config.getNode(sectionKey);
 
         Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeBreadcrumb(config, configSection), false);
-        Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeComments(configSection), false);
+        Platform.sendFeedbacks(ctx.getSource(), ComponentUtil.configNodeComments(configSection), false);
         Platform.sendFeedback(ctx.getSource(), Component::empty, false);
 
         if(configSection.hasMetadata(ChangeWarning.TYPE)) {
@@ -309,7 +309,7 @@ public class ConfigCommands {
             Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configFeedback(trackedValue, valueType), false);
             return 1;
         } catch (ConfigFailException exception) {
-            Platform.sendFeedback(ctx.getSource(), exception::component, false);
+            Platform.sendFailure(ctx.getSource(), exception.component());
             return 0;
         }
     }
@@ -319,7 +319,7 @@ public class ConfigCommands {
         try {
             return configSetValue(ctx, trackedValue, isARGB ? ValueType.COLOR_ARGB : ValueType.COLOR_RGB, ColorUtil.colorToHex(ColorUtil.toArgbColor(input, isARGB), isARGB));
         } catch (NumberFormatException e) {
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Invalid RGB Hex color format: " + input).withStyle(ChatFormatting.RED), false);
+            Platform.sendFailure(ctx.getSource(), Component.literal("Invalid RGB Hex color format: " + input).withStyle(ChatFormatting.RED));
             return 0;
         }
     }
@@ -337,7 +337,7 @@ public class ConfigCommands {
             Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.LIST)), false);
             return 1;
         } catch (ConfigFailException exception) {
-            Platform.sendFeedback(ctx.getSource(), exception::component, false);
+            Platform.sendFailure(ctx.getSource(), exception.component());
             return 0;
         }
     }
@@ -356,7 +356,7 @@ public class ConfigCommands {
             Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.LIST)), false);
             return 1;
         } catch (ConfigFailException exception) {
-            Platform.sendFeedback(ctx.getSource(), exception::component, false);
+            Platform.sendFailure(ctx.getSource(), exception.component());
             return 0;
         }
     }
