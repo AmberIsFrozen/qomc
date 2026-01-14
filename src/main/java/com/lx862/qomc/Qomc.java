@@ -1,6 +1,7 @@
 package com.lx862.qomc;
 
 import com.lx862.qomc.config.DemoConfig;
+import com.lx862.qomc.config.MainConfig;
 import com.lx862.qomc.util.ModInfo;
 import com.lx862.qomc.util.QconfUtil;
 import folk.sisby.kaleido.lib.quiltconfig.api.Config;
@@ -16,8 +17,11 @@ public class Qomc implements ModInitializer {
 
     @Override
     public void onInitialize() {
-        DemoConfig.init();
+        MainConfig.init();
 
+        if(MainConfig.INSTANCE.generateDemoConfig.value()) {
+            DemoConfig.init();
+        }
 
         Platform.registerCommand(commandDispatcher -> {
             Map<ModInfo, List<Config>> configGroup = probeModConfigs();
