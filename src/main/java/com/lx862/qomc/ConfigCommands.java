@@ -348,10 +348,11 @@ public class ConfigCommands {
             Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Value \"" + item + "\" is not in list " + QconfUtil.getDisplayName(value)).withStyle(ChatFormatting.RED), false);
             return 0;
         }
-        value.value().remove(item);
+        ValueList<T> newList = (ValueList<T>) value.value().copy();
+        newList.remove(item);
 
         try {
-            setValue(value, value.value());
+            setValue(value, newList);
 
             Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(Component.literal(" from list!")), false);
             Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.LIST)), false);
@@ -383,10 +384,11 @@ public class ConfigCommands {
             Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Value \"" + key + "\" is not in the map!").withStyle(ChatFormatting.RED), false);
             return 0;
         }
-        T removedValue = value.value().remove(key);
+        ValueMap<T> newMap = (ValueMap<T>)value.value().copy();
+        T removedValue = newMap.remove(key);
 
         try {
-            setValue(value, value.value());
+            setValue(value, newMap);
 
             Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed \"" + key + "\" with value ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, removedValue, childType)).append(" from map!"), false);
             Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.MAP)), false);
