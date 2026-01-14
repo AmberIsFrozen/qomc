@@ -4,9 +4,12 @@ import com.lx862.qomc.config.DemoConfig;
 import com.lx862.qomc.config.MainConfig;
 import com.lx862.qomc.util.ModInfo;
 import com.lx862.qomc.util.QconfUtil;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import folk.sisby.kaleido.lib.quiltconfig.api.Config;
 import folk.sisby.kaleido.lib.quiltconfig.impl.util.ConfigsImpl;
 import net.fabricmc.api.ModInitializer;
+import net.minecraft.commands.CommandSourceStack;
+import net.minecraft.commands.Commands;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -24,14 +27,29 @@ public class Qomc implements ModInitializer {
         }
 
         Platform.registerCommand(commandDispatcher -> {
+            boolean unifiedNode = MainConfig.INSTANCE.unifiedConfigCommand.value();
+
             Map<ModInfo, List<Config>> configGroup = probeModConfigs();
+            List<LiteralArgumentBuilder<CommandSourceStack>> nodeToRegister = new ArrayList<>();
 
             for (Map.Entry<ModInfo, List<Config>> modConfigEntry : configGroup.entrySet()) {
                 ModInfo belongingMod = modConfigEntry.getKey();
                 List<Config> modConfigs = modConfigEntry.getValue();
-                commandDispatcher.register(
-                        ConfigCommands.buildModNode(belongingMod, modConfigs, commandDispatcher)
-                );
+
+                nodeToRegister.add(ConfigCommands.buildModNode(belongingMod, belongingMod.id() + (unifiedNode ? "" : "Config"), modConfigs, commandDispatcher));
+            }
+
+            if(unifiedNode) {
+                LiteralArgumentBuilder<CommandSourceStack> rootNode = Commands.literal("config");
+                for(LiteralArgumentBuilder<CommandSourceStack> commandNode : nodeToRegister) {
+                    rootNode.then(commandNode);
+                }
+
+                commandDispatcher.register(rootNode);
+            } else {
+                for(LiteralArgumentBuilder<CommandSourceStack> commandNode : nodeToRegister) {
+                    commandDispatcher.register(commandNode);
+                }
             }
         });
     }

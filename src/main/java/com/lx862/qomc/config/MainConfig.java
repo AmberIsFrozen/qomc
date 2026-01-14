@@ -14,6 +14,11 @@ public class MainConfig extends ReflectiveConfig {
     @ChangeWarning(folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning.Type.RequiresRestart)
     public final TrackedValue<Boolean> generateDemoConfig = value(true);
 
+    @Comment("If true, only one /config command will be registered which covers all mod.")
+    @Comment("If false, a command with the name \"/<mod_id>Config\" will be registered")
+    @ChangeWarning(folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning.Type.RequiresRestart)
+    public final TrackedValue<Boolean> unifiedConfigCommand = value(false);
+
     public static void init() {
         // Static initialization
     }
