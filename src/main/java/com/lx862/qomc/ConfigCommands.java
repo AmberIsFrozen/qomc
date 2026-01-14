@@ -78,10 +78,11 @@ public class ConfigCommands {
     }
 
     private static <T> LiteralArgumentBuilder<CommandSourceStack> buildFieldNode(Config config, TrackedValue<T> trackedValue) {
-        LiteralArgumentBuilder<CommandSourceStack> fieldNode = Commands.literal(QconfUtil.getSerializedName(trackedValue))
-        .executes(ctx -> printField(ctx, config, trackedValue));
+        ValueType valueType = ValueType.getType(trackedValue, trackedValue.getDefaultValue());
 
-        ValueType valueType = ValueType.getType(trackedValue);
+        LiteralArgumentBuilder<CommandSourceStack> fieldNode = Commands.literal(QconfUtil.getSerializedName(trackedValue))
+        .executes(ctx -> printField(ctx, config, trackedValue, valueType));
+
         List<ArgumentBuilder<CommandSourceStack, ?>> setValueNodes = buildSetValueNodes(trackedValue, valueType, (ctx, newValue) -> {
             if(valueType == ValueType.BOOLEAN || valueType == ValueType.STRING || valueType == ValueType.INTEGER || valueType == ValueType.LONG || valueType == ValueType.FLOAT || valueType == ValueType.DOUBLE) {
                 return configSetValue(ctx, trackedValue, valueType, newValue);
@@ -191,15 +192,15 @@ public class ConfigCommands {
 
         if(valueType == ValueType.LIST) {
             TrackedValue<ValueList<Object>> list = (TrackedValue<ValueList<Object>>)trackedValue;
-            ValueType childType = ValueType.getChildType(trackedValue, list.value().getDefaultValue());
+            ValueType childType = ValueType.getType(trackedValue, list.value().getDefaultValue());
 
             LiteralArgumentBuilder<CommandSourceStack> addNode = Commands.literal("add");
-            for(ArgumentBuilder<CommandSourceStack, ?> addValueNode : buildSetValueNodes(trackedValue, childType, (ctx, newValue) -> configAddList(ctx, list, newValue))) {
+            for(ArgumentBuilder<CommandSourceStack, ?> addValueNode : buildSetValueNodes(trackedValue, childType, (ctx, newValue) -> configAddList(ctx, list, newValue, childType))) {
                 addNode.then(addValueNode);
             }
 
             LiteralArgumentBuilder<CommandSourceStack> removeNode = Commands.literal("remove");
-            for(ArgumentBuilder<CommandSourceStack, ?> removeValueNode : buildSetValueNodes(trackedValue, childType, (ctx, newValue) -> configRemoveList(ctx, list, newValue))) {
+            for(ArgumentBuilder<CommandSourceStack, ?> removeValueNode : buildSetValueNodes(trackedValue, childType, (ctx, newValue) -> configRemoveList(ctx, list, newValue, childType))) {
                 if(removeValueNode instanceof RequiredArgumentBuilder<?, ?>) {
                     RequiredArgumentBuilder<?, ?> requiredArgumentBuilder = (RequiredArgumentBuilder<?, ?>)removeValueNode;
                     requiredArgumentBuilder.suggests((commandContext, suggestionsBuilder) -> {
@@ -219,14 +220,14 @@ public class ConfigCommands {
 
         if(valueType == ValueType.MAP) {
             TrackedValue<ValueMap<Object>> map = (TrackedValue<ValueMap<Object>>)trackedValue;
-            ValueType childType = ValueType.getChildType(map, map.value().getDefaultValue());
+            ValueType childType = ValueType.getType(map, map.value().getDefaultValue());
 
             RequiredArgumentBuilder<CommandSourceStack, ?> setKeyNode = Commands.argument("key", StringArgumentType.string())
             .suggests((commandContext, suggestionsBuilder) -> {
                 map.value().keySet().forEach(key -> suggestionsBuilder.suggest(StringArgumentType.escapeIfRequired(key)));
                 return suggestionsBuilder.buildFuture();
             });
-            for(ArgumentBuilder<CommandSourceStack, ?> mapNode : buildSetValueNodes(trackedValue, childType, (ctx, newValue) -> configSetMap(ctx, map, StringArgumentType.getString(ctx, "key"), newValue))) {
+            for(ArgumentBuilder<CommandSourceStack, ?> mapNode : buildSetValueNodes(trackedValue, childType, (ctx, newValue) -> configSetMap(ctx, map, StringArgumentType.getString(ctx, "key"), newValue, childType))) {
                 setKeyNode.then(mapNode);
             }
 
@@ -235,7 +236,7 @@ public class ConfigCommands {
                     map.value().keySet().forEach(key -> suggestionsBuilder.suggest(StringArgumentType.escapeIfRequired(key)));
                     return suggestionsBuilder.buildFuture();
                 })
-                .executes(ctx -> configRemoveMap(ctx, map, StringArgumentType.getString(ctx, "key")));
+                .executes(ctx -> configRemoveMap(ctx, map, StringArgumentType.getString(ctx, "key"), childType));
 
             LiteralArgumentBuilder<CommandSourceStack> setNode = Commands.literal("set").then(setKeyNode);
             LiteralArgumentBuilder<CommandSourceStack> removeNode = Commands.literal("remove").then(removeKeyNode);
@@ -246,13 +247,19 @@ public class ConfigCommands {
         return nodes;
     }
 
-    private static int printField(CommandContext<CommandSourceStack> ctx, Config config, TrackedValue<?> trackedValue) {
+    private static int printField(CommandContext<CommandSourceStack> ctx, Config config, TrackedValue<?> trackedValue, ValueType valueType) {
         Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeBreadcrumb(config, trackedValue), false);
         Platform.sendFeedbacks(ctx.getSource(), ComponentUtil.configNodeComments(trackedValue), false);
 
         Platform.sendFeedback(ctx.getSource(), Component::empty, false);
-        Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.currentValue(trackedValue)
-                .withStyle(s -> s.withHoverEvent(Platform.hoverEventText(ComponentUtil.valueType(trackedValue)))), false);
+        Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.currentValue(trackedValue, valueType)
+                .withStyle(s -> s.withHoverEvent(
+                        Platform.hoverEventText(
+                                ComponentUtil.valueType(valueType)
+                                .append(ComponentUtil.constraints(trackedValue.constraints()))
+                        )
+                    )
+                ), false);
         Platform.sendFeedback(ctx.getSource(), Component::empty, false);
 
         if(trackedValue.hasMetadata(ChangeWarning.TYPE)) {
@@ -260,17 +267,12 @@ public class ConfigCommands {
             Platform.sendFeedback(ctx.getSource(), Component::empty, false);
         }
 
-        MutableComponent changeText;
-
-        if(trackedValue.isBeingOverridden()) {
-            changeText = Component.literal("Value is overriden to " + QconfUtil.stringify(trackedValue.value()) + " by one or more mods.").withStyle(ChatFormatting.YELLOW);
-        } else {
-            changeText = Component.literal("[\uD83D\uDD8A Change]").withStyle(
-                    Style.EMPTY
-                            .withColor(ChatFormatting.GOLD)
-                            .withUnderlined(true)
-                            .withClickEvent(Platform.clickEventSuggestCommand(commandToString(ctx))));
-        }
+        MutableComponent changeText = Component.literal("[\uD83D\uDD8A Change]").withStyle(
+            Style.EMPTY
+                    .withColor(ChatFormatting.GOLD)
+                    .withUnderlined(true)
+                    .withClickEvent(Platform.clickEventSuggestCommand(commandToString(ctx)))
+        );
 
         Platform.sendFeedback(ctx.getSource(), () -> changeText, false);
         Platform.sendFeedback(ctx.getSource(), Component::empty, false);
@@ -288,9 +290,10 @@ public class ConfigCommands {
         }
 
         for(TrackedValue<?> trackedValue : sectionTree.fields()) {
+            ValueType valueType = ValueType.getType(trackedValue, trackedValue.getDefaultValue());
             String command = commandToString(ctx) + QconfUtil.getSerializedName(trackedValue);
 
-            Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.valueOverview(trackedValue)
+            Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.valueOverview(trackedValue, valueType)
                     .withStyle(s ->
                             s.withHoverEvent(Platform.hoverEventText(ComponentUtil.configNodeTooltip(trackedValue)))
                                     .withClickEvent(Platform.clickEventSuggestCommand(command))
@@ -326,13 +329,13 @@ public class ConfigCommands {
         return configSetValue(ctx, value, ValueType.ENUM, enumName);
     }
 
-    private static <T> int configAddList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item) {
+    private static <T> int configAddList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item, ValueType childType) {
         ValueList<T> newList = (ValueList<T>) value.value().copy();
         newList.add(item);
         try {
             setValue(value, newList);
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Added " + QconfUtil.stringify(item) + " to list " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.LIST)), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Inserted ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(Component.literal(" to list!")), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.LIST)), false);
             return 1;
         } catch (ConfigFailException exception) {
             Platform.sendFailure(ctx.getSource(), exception.component());
@@ -340,7 +343,7 @@ public class ConfigCommands {
         }
     }
 
-    private static <T> int configRemoveList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item) {
+    private static <T> int configRemoveList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item, ValueType childType) {
         if(!value.value().contains(item)) {
             Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Value \"" + item + "\" is not in list " + QconfUtil.getDisplayName(value)).withStyle(ChatFormatting.RED), false);
             return 0;
@@ -350,8 +353,8 @@ public class ConfigCommands {
         try {
             setValue(value, value.value());
 
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed " + QconfUtil.stringify(item) + " from list " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.LIST)), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(Component.literal(" from list!")), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.LIST)), false);
             return 1;
         } catch (ConfigFailException exception) {
             Platform.sendFailure(ctx.getSource(), exception.component());
@@ -359,15 +362,15 @@ public class ConfigCommands {
         }
     }
 
-    private static <T> int configSetMap(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueMap<T>> value, String key, T item) {
+    private static <T> int configSetMap(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueMap<T>> value, String key, T item, ValueType childType) {
         ValueMap<T> newMap = (ValueMap<T>) value.value().copy();
         newMap.put(key, item);
 
         try {
             setValue(value, newMap);
 
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Set " + key + " to " + QconfUtil.stringify(item) + ".").withStyle(ChatFormatting.GREEN), false);
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.MAP)), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Set \"" + key + "\" to ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(" in map!"), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.MAP)), false);
             return 1;
         } catch (ConfigFailException exception) {
             Platform.sendFeedback(ctx.getSource(), exception::component, false);
@@ -375,18 +378,18 @@ public class ConfigCommands {
         }
     }
 
-    private static <T> int configRemoveMap(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueMap<T>> value, String key) {
+    private static <T> int configRemoveMap(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueMap<T>> value, String key, ValueType childType) {
         if(!value.value().containsKey(key)) {
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Value \"" + key + "\" is not in map " + QconfUtil.getDisplayName(value)).withStyle(ChatFormatting.RED), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Value \"" + key + "\" is not in the map!").withStyle(ChatFormatting.RED), false);
             return 0;
         }
-        value.value().remove(key);
+        T removedValue = value.value().remove(key);
 
         try {
             setValue(value, value.value());
 
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed " + key + " from map " + QconfUtil.getDisplayName(value) + ".").withStyle(ChatFormatting.GREEN), false);
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, ValueType.MAP)), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Removed \"" + key + "\" with value ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, removedValue, childType)).append(" from map!"), false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.MAP)), false);
             return 1;
         } catch (ConfigFailException exception) {
             Platform.sendFeedback(ctx.getSource(), exception::component, false);

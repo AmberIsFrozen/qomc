@@ -29,6 +29,9 @@ public class ColorUtil {
         return StringUtils.leftPad(Integer.toHexString(colorChannel), 2, "0");
     }
 
+    /**
+     * A representation of an ARGB color
+     */
     public static final class ArgbColor {
         private final int alpha;
         private final int red;

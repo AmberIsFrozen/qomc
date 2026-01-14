@@ -24,7 +24,8 @@ public class ComponentUtil {
                 .applyFormat(ChatFormatting.GREEN)
                 .withUnderlined(true));
 
-        MutableComponent text = Component.literal(" has been set to ").withStyle(s -> s.withUnderlined(false)).append(ComponentUtil.formatValue(value, valueType));
+        MutableComponent text = Component.literal(" has been set to ").withStyle(s -> s.withUnderlined(false))
+        .append(ComponentUtil.formatValue(value, value.getRealValue(), valueType));
         return keyName.append(text);
     }
 
@@ -58,10 +59,8 @@ public class ComponentUtil {
     public static List<MutableComponent> configNodeComments(ValueTreeNode node) {
         List<MutableComponent> components = new ArrayList<>();
         if(node.hasMetadata(Comment.TYPE)) {
-            boolean prependNewLine = false;
             for(String comment : node.metadata(Comment.TYPE)) {
-                components.add(Component.literal((prependNewLine ? "\n" : "") + comment).withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY).withBold(false)));
-                prependNewLine = true;
+                components.add(Component.literal(comment).withStyle(ChatFormatting.GRAY));
             }
         }
         return components;
@@ -75,21 +74,20 @@ public class ComponentUtil {
         }
     }
 
-    public static MutableComponent valueOverview(TrackedValue<?> trackedValue) {
+    public static <T> MutableComponent valueOverview(TrackedValue<T> trackedValue, ValueType valueType) {
         MutableComponent text = Component.literal("* ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW));
         MutableComponent valueName = Component.literal(trackedValue.key().getLastComponent()).withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(false));
 
         MutableComponent t3 = Component.literal(": ").withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(false));
-        MutableComponent t4 = formatValue(trackedValue, ValueType.getType(trackedValue)).withStyle(Style.EMPTY.withBold(false));
+        MutableComponent t4 = formatValue(trackedValue, trackedValue.value(), valueType).withStyle(Style.EMPTY.withBold(false).withUnderlined(!Objects.equals(trackedValue.value(), trackedValue.getDefaultValue())));
         return text.append(valueName).append(t3).append(t4);
     }
 
-    public static MutableComponent valueType(TrackedValue<?> trackedValue) {
-        ValueType valueType = ValueType.getType(trackedValue);
-        return Component.literal("Type: " + valueType.name).append(constraintsText(trackedValue.constraints()));
+    public static MutableComponent valueType(ValueType valueType) {
+        return Component.literal("Type: " + valueType.name);
     }
 
-    public static <T> MutableComponent constraintsText(Iterable<Constraint<T>> constraints) {
+    public static <T> MutableComponent constraints(Iterable<Constraint<T>> constraints) {
         MutableComponent finalText = Component.empty();
 
         for(Constraint<?> constraint : constraints) {
@@ -140,21 +138,37 @@ public class ComponentUtil {
         return finalText;
     }
 
-    public static MutableComponent currentValue(TrackedValue<?> trackedValue) {
+    public static <T> MutableComponent currentValue(TrackedValue<T> trackedValue, ValueType valueType) {
         boolean valueIsDefault = Objects.equals(trackedValue.value(), trackedValue.getDefaultValue());
+        boolean valueOverriden = trackedValue.isBeingOverridden();
         MutableComponent headerText = Component.literal("Current Value: ");
-        MutableComponent valueText = formatValue(trackedValue, ValueType.getType(trackedValue));
+        MutableComponent valueText = formatValue(trackedValue, trackedValue.value(), valueType);
 
-        MutableComponent defaultText;
+        MutableComponent valueStatusText;
 
-        if(valueIsDefault) {
-            defaultText = Component.literal(" (Default)").withStyle(ChatFormatting.GRAY);
+        if(valueOverriden) {
+            valueStatusText = Component.literal("(Overriden)")
+                    .withStyle(s ->
+                            s.withHoverEvent(Platform.hoverEventText(
+                                Component.literal("Value is overridden by one or more mods.\nReal value: ").withStyle(ChatFormatting.YELLOW)
+                                .append(formatValue(trackedValue, trackedValue.getRealValue(), valueType))
+                            ))
+                    )
+                    .withStyle(ChatFormatting.AQUA);
+        } else if(valueIsDefault) {
+            valueStatusText = Component.literal("(Default)").withStyle(ChatFormatting.GRAY);
         } else {
-            defaultText = Component.literal(" (Changed)")
-                    .withStyle(s -> s.withHoverEvent(Platform.hoverEventText(Component.literal("Default: " + QconfUtil.stringify(trackedValue.getDefaultValue())).withStyle(ChatFormatting.GRAY))))
+            valueStatusText = Component.literal("(Changed)")
+                    .withStyle(s -> s.withHoverEvent(
+                            Platform.hoverEventText(
+                                    Component.literal("Default: ").withStyle(ChatFormatting.GRAY)
+                                    .append(formatValue(trackedValue, trackedValue.getDefaultValue(), valueType)))
+                            )
+                            .withUnderlined(true)
+                    )
                     .withStyle(ChatFormatting.YELLOW);
         }
-        return headerText.append(valueText).append(defaultText);
+        return headerText.append(valueText).append(" ").append(valueStatusText);
     }
 
     public static MutableComponent configNodeChangeWarning(folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning changeWarning) {
@@ -177,36 +191,36 @@ public class ComponentUtil {
         return headerText.append(warningText);
     }
 
-    public static MutableComponent formatValue(TrackedValue<?> trackedValue, ValueType valueType) {
-        boolean valueIsDefault = Objects.equals(trackedValue.getDefaultValue(), trackedValue.value());
+    public static MutableComponent formatValue(TrackedValue<?> trackedValue, Object value, ValueType valueType) {
         if(valueType == ValueType.LIST) {
             MutableComponent text = Component.literal("[").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
-            ValueList<?> list = (ValueList<?>)trackedValue.value();
-            ValueType listValueType = ValueType.getChildType(trackedValue, list.getDefaultValue());
+            ValueList<?> list = (ValueList<?>)value;
+            ValueType childType = ValueType.getType(trackedValue, list.getDefaultValue());
 
             for(int i = 0; i < list.size(); i++) {
                 Object innerValue = list.get(i);
-                text.append(formatSimpleValue(innerValue, listValueType));
+                text.append(formatSimpleValue(innerValue, childType));
                 if(i != list.size()-1) text.append(Component.literal(", ").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE)));
             }
             text.append("]").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
             return text;
         } else if(valueType == ValueType.MAP) {
             MutableComponent text = Component.literal("[").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
-            ValueMap<?> map = (ValueMap<?>)trackedValue.value();
+            ValueMap<?> map = (ValueMap<?>)value;
+            ValueType childType = ValueType.getType(trackedValue, map.getDefaultValue());
 
             for(Map.Entry<String, ?> entry : map.entrySet()) {
                 text.append("\n");
                 text.append("   ");
-                text.append(Component.literal(entry.getKey() + ": ").withStyle(s -> s.withColor(ChatFormatting.GOLD).withBold(true)));
-                text.append(formatSimpleValue(entry.getValue(), ValueType.getChildType(trackedValue, entry.getValue())));
+                text.append(Component.literal(entry.getKey() + ": ").withStyle(s -> s.withColor(ChatFormatting.AQUA)));
+                text.append(formatSimpleValue(entry.getValue(), childType));
             }
 
             text.append("\n]").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
             return text;
         }
 
-        return formatSimpleValue(trackedValue.value(), valueType).withStyle(s -> s.withUnderlined(!valueIsDefault));
+        return formatSimpleValue(value, valueType);
     }
 
     private static MutableComponent formatSimpleValue(Object obj, ValueType valueType) {

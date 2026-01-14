@@ -42,6 +42,13 @@ public enum ValueType {
         this.name = name;
     }
 
+    public static ValueType getType(TrackedValue<?> field, Object referenceValue) {
+        ValueType colorType = probeColorConstraint(field);
+
+        if(referenceValue instanceof String && colorType != null) return colorType;
+        return probeTypeFromObject(referenceValue);
+    }
+
     private static ValueType probeColorConstraint(TrackedValue<?> parentField) {
         boolean color = false;
         boolean alpha = false;
@@ -57,20 +64,7 @@ public enum ValueType {
         return null;
     }
 
-    public static ValueType getChildType(TrackedValue<?> parentValue, Object childValue) {
-        ValueType colorType = probeColorConstraint(parentValue);
-        return colorType == null ? getType(childValue) : colorType;
-    }
-
-    public static ValueType getType(TrackedValue<?> field) {
-        Object obj = field.getDefaultValue();
-        ValueType colorType = probeColorConstraint(field);
-
-        if(obj instanceof String && colorType != null) return colorType;
-        return getType(obj);
-    }
-
-    private static ValueType getType(Object obj) {
+    private static ValueType probeTypeFromObject(Object obj) {
         if(obj instanceof Boolean) return BOOLEAN;
         if(obj instanceof String) return STRING;
         if(obj instanceof Integer) return INTEGER;
