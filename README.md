@@ -1,0 +1,2 @@
+# QoMC
+Formally **Quilt Config over Minecraft Command**, this is a mod which automagically generates a config commands for mods targeting [Kaleido Config](https://github.com/sisby-folk/kaleido-config) (JiJ-safe implementation of Quilt Config).
