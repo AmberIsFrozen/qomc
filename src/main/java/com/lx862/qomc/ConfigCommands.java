@@ -93,7 +93,7 @@ public class ConfigCommands {
                 return configSetColorHex(ctx, (TrackedValue<String>) trackedValue, (String)newValue, true);
             }
             if(valueType == ValueType.ENUM) {
-                return configSetEnum(ctx, (TrackedValue<Enum<?>>) trackedValue, (String)newValue);
+                return configSetEnum(ctx, (TrackedValue<Enum<?>>) trackedValue, (Enum<?>)newValue);
             }
             return 0;
         });
@@ -184,7 +184,7 @@ public class ConfigCommands {
                 String enumName = enumValue.name();
                 nodes.add(
                     Commands.literal(enumName)
-                            .executes(ctx -> valueSetCallback.onSet(ctx, (T)enumName))
+                            .executes(ctx -> valueSetCallback.onSet(ctx, (T)enumValue))
                 );
             }
         }
@@ -322,8 +322,8 @@ public class ConfigCommands {
         }
     }
 
-    private static int configSetEnum(CommandContext<CommandSourceStack> ctx, TrackedValue<Enum<?>> value, String enumName) {
-        return configSetValue(ctx, value, ValueType.ENUM, Enum.valueOf(value.getDefaultValue().getClass(), enumName));
+    private static int configSetEnum(CommandContext<CommandSourceStack> ctx, TrackedValue<Enum<?>> value, Enum<?> enumName) {
+        return configSetValue(ctx, value, ValueType.ENUM, enumName);
     }
 
     private static <T> int configAddList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item) {
