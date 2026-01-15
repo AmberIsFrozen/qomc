@@ -10,13 +10,23 @@ import folk.sisby.kaleido.lib.quiltconfig.impl.util.ConfigsImpl;
 import net.fabricmc.api.ModInitializer;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
+
+//? if 1.16.5 {
+/*import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+*///? } else {
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+//? }
 
 import java.util.*;
 
 public class Qomc implements ModInitializer {
+    //? if 1.16.5 {
+    /*public static final Logger LOGGER = LogManager.getLogger("QoMC");
+    *///? } else {
     public static final Logger LOGGER = LoggerFactory.getLogger("QoMC");
+    //? }
 
     @Override
     public void onInitialize() {

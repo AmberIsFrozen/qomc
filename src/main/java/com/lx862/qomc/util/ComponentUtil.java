@@ -17,30 +17,33 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.TextColor;
+
+import static com.lx862.qomc.Platform.*;
 
 public class ComponentUtil {
     public static Component configFeedback(TrackedValue<?> value, ValueType valueType) {
-        MutableComponent keyName = Component.literal(QconfUtil.getDisplayName(value)).withStyle(s -> s
+        MutableComponent keyName = literalText(QconfUtil.getDisplayName(value)).withStyle(s -> s
                 .applyFormat(ChatFormatting.GREEN)
                 .withUnderlined(true));
 
-        MutableComponent text = Component.literal(" has been set to ").withStyle(s -> s.withUnderlined(false))
+        MutableComponent text = literalText(" has been set to ").withStyle(s -> s.withUnderlined(false))
         .append(ComponentUtil.formatValue(value, value.getRealValue(), valueType));
         return keyName.append(text);
     }
 
     public static MutableComponent configNodeBreadcrumb(Config config, ValueTreeNode node) {
-        MutableComponent fieldHeader = Component.empty();
+        MutableComponent fieldHeader = emptyText();
 
         for(int i = 0; i < node.key().length(); i++) {
             ValueTreeNode breadcrumbNode = config.getNode(QconfUtil.trimKey(node.key(), node.key().length()-1-i));
             MutableComponent nodeText;
 
             if(breadcrumbNode instanceof ValueTreeNode.Section) {
-                nodeText = Component.literal("[" + breadcrumbNode.key().getLastComponent() + "]")
+                nodeText = literalText("[" + breadcrumbNode.key().getLastComponent() + "]")
                         .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN));
             } else {
-                nodeText = Component.literal(QconfUtil.getDisplayName(breadcrumbNode)).withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(true));
+                nodeText = literalText(QconfUtil.getDisplayName(breadcrumbNode)).withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(true));
             }
 
             if(i != node.key().length()-1) { // Add hover text
@@ -49,7 +52,7 @@ public class ComponentUtil {
 
             fieldHeader.append(nodeText);
             if(i != node.key().length()-1) {
-                MutableComponent arrowText = Component.literal(" > ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD));
+                MutableComponent arrowText = literalText(" > ").withStyle(Style.EMPTY.withColor(ChatFormatting.GOLD));
                 fieldHeader.append(arrowText);
             }
         }
@@ -60,7 +63,7 @@ public class ComponentUtil {
         List<MutableComponent> components = new ArrayList<>();
         if(node.hasMetadata(Comment.TYPE)) {
             for(String comment : node.metadata(Comment.TYPE)) {
-                components.add(Component.literal(comment).withStyle(ChatFormatting.GRAY));
+                components.add(literalText(comment).withStyle(ChatFormatting.GRAY));
             }
         }
         return components;
@@ -68,29 +71,29 @@ public class ComponentUtil {
 
     public static MutableComponent configNodeTooltip(ValueTreeNode node) {
         if(node instanceof ValueTreeNode.Section) {
-            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.GREEN)
-                    .append(configNodeComments(node).stream().reduce(Component.empty(), (acc, e) -> acc.append("\n").append(e)).withStyle(s -> s.withBold(false)));
+            return literalText(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.GREEN)
+                    .append(configNodeComments(node).stream().reduce(emptyText(), (acc, e) -> acc.append("\n").append(e)).withStyle(s -> s.withBold(false)));
         } else {
-            return Component.literal(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.WHITE).withStyle(ChatFormatting.BOLD)
-                    .append(configNodeComments(node).stream().reduce(Component.empty(), (acc, e) -> acc.append("\n").append(e)).withStyle(s -> s.withBold(false)));
+            return literalText(QconfUtil.getDisplayName(node)).withStyle(ChatFormatting.WHITE).withStyle(ChatFormatting.BOLD)
+                    .append(configNodeComments(node).stream().reduce(emptyText(), (acc, e) -> acc.append("\n").append(e)).withStyle(s -> s.withBold(false)));
         }
     }
 
     public static <T> MutableComponent valueOverview(TrackedValue<T> trackedValue, ValueType valueType) {
-        MutableComponent text = Component.literal("* ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW));
-        MutableComponent valueName = Component.literal(QconfUtil.getSerializedName(trackedValue)).withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY).withBold(false));
+        MutableComponent text = literalText("* ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW));
+        MutableComponent valueName = literalText(QconfUtil.getSerializedName(trackedValue)).withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY).withBold(false));
 
-        MutableComponent t3 = Component.literal(": ").withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(false));
+        MutableComponent t3 = literalText(": ").withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(false));
         MutableComponent t4 = formatValue(trackedValue, trackedValue.value(), valueType).withStyle(Style.EMPTY.withBold(false).withUnderlined(!Objects.equals(trackedValue.value(), trackedValue.getDefaultValue())));
         return text.append(valueName).append(t3).append(t4);
     }
 
     public static MutableComponent valueType(ValueType valueType) {
-        return Component.literal("Type: " + valueType.name);
+        return literalText("Type: " + valueType.name);
     }
 
     public static <T> MutableComponent constraints(Iterable<Constraint<T>> constraints) {
-        MutableComponent finalText = Component.empty();
+        MutableComponent finalText = emptyText();
 
         for(Constraint<?> constraint : constraints) {
             finalText.append("\n");
@@ -134,7 +137,7 @@ public class ComponentUtil {
             } else {
                 constraintStr = constraint.getRepresentation();
             }
-            finalText.append(Component.literal("[" + constraintStr + "]").withStyle(ChatFormatting.YELLOW));
+            finalText.append(literalText("[" + constraintStr + "]").withStyle(ChatFormatting.YELLOW));
         }
 
         return finalText;
@@ -143,27 +146,27 @@ public class ComponentUtil {
     public static <T> MutableComponent currentValue(TrackedValue<T> trackedValue, ValueType valueType) {
         boolean valueIsDefault = Objects.equals(trackedValue.value(), trackedValue.getDefaultValue());
         boolean valueOverriden = trackedValue.isBeingOverridden();
-        MutableComponent headerText = Component.literal("Current Value: ");
+        MutableComponent headerText = literalText("Current Value: ");
         MutableComponent valueText = formatValue(trackedValue, trackedValue.value(), valueType);
 
         MutableComponent valueStatusText;
 
         if(valueOverriden) {
-            valueStatusText = Component.literal("(Overriden)")
+            valueStatusText = literalText("(Overriden)")
                     .withStyle(s ->
                             s.withHoverEvent(Platform.hoverEventText(
-                                Component.literal("Value is overridden by one or more mods.\nReal value: ").withStyle(ChatFormatting.YELLOW)
+                                literalText("Value is overridden by one or more mods.\nReal value: ").withStyle(ChatFormatting.YELLOW)
                                 .append(formatValue(trackedValue, trackedValue.getRealValue(), valueType))
                             ))
                     )
                     .withStyle(ChatFormatting.AQUA);
         } else if(valueIsDefault) {
-            valueStatusText = Component.literal("(Default)").withStyle(ChatFormatting.GRAY);
+            valueStatusText = literalText("(Default)").withStyle(ChatFormatting.GRAY);
         } else {
-            valueStatusText = Component.literal("(Changed)")
+            valueStatusText = literalText("(Changed)")
                     .withStyle(s -> s.withHoverEvent(
                             Platform.hoverEventText(
-                                    Component.literal("Default: ").withStyle(ChatFormatting.GRAY)
+                                    literalText("Default: ").withStyle(ChatFormatting.GRAY)
                                     .append(formatValue(trackedValue, trackedValue.getDefaultValue(), valueType)))
                             )
                             .withUnderlined(true)
@@ -174,19 +177,19 @@ public class ComponentUtil {
     }
 
     public static MutableComponent configNodeChangeWarning(folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning changeWarning) {
-        MutableComponent headerText = Component.literal("Note: ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW).withBold(true));
+        MutableComponent headerText = literalText("Note: ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW).withBold(true));
 
         MutableComponent warningText = null;
         if(changeWarning.getType() == ChangeWarning.Type.Custom) {
-            warningText = Component.literal(changeWarning.getCustomMessage());
+            warningText = literalText(changeWarning.getCustomMessage());
         } else if(changeWarning.getType() == ChangeWarning.Type.CustomTranslatable) {
-            warningText = Component.translatable(changeWarning.getCustomMessage());
+            warningText = translatableText(changeWarning.getCustomMessage());
         } else if(changeWarning.getType() == ChangeWarning.Type.RequiresRestart) {
-            warningText = Component.literal("Restart is required for changes to apply");
+            warningText = literalText("Restart is required for changes to apply");
         } else if(changeWarning.getType() == ChangeWarning.Type.Experimental) {
-            warningText = Component.literal("Experimental option, use with caution!");
+            warningText = literalText("Experimental option, use with caution!");
         } else if(changeWarning.getType() == ChangeWarning.Type.Unsafe) {
-            warningText = Component.literal("Unsafe option, use at your own risk!");
+            warningText = literalText("Unsafe option, use at your own risk!");
         }
 
         warningText.withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW).withBold(false));
@@ -195,26 +198,26 @@ public class ComponentUtil {
 
     public static MutableComponent formatValue(TrackedValue<?> trackedValue, Object value, ValueType valueType) {
         if(valueType == ValueType.LIST) {
-            MutableComponent text = Component.literal("[").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
+            MutableComponent text = literalText("[").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
             ValueList<?> list = (ValueList<?>)value;
             ValueType childType = ValueType.getType(trackedValue, list.getDefaultValue());
 
             for(int i = 0; i < list.size(); i++) {
                 Object innerValue = list.get(i);
                 text.append(formatSimpleValue(innerValue, childType));
-                if(i != list.size()-1) text.append(Component.literal(", ").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE)));
+                if(i != list.size()-1) text.append(literalText(", ").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE)));
             }
             text.append("]").withStyle(s -> s.withUnderlined(false).withColor(ChatFormatting.WHITE));
             return text;
         } else if(valueType == ValueType.MAP) {
-            MutableComponent text = Component.literal("[").withStyle(ChatFormatting.WHITE);
+            MutableComponent text = literalText("[").withStyle(ChatFormatting.WHITE);
             ValueMap<?> map = (ValueMap<?>)value;
             ValueType childType = ValueType.getType(trackedValue, map.getDefaultValue());
 
             for(Map.Entry<String, ?> entry : map.entrySet()) {
                 text.append("\n");
-                text.append(Component.literal("   ").withStyle(s -> s.withUnderlined(false))); // Indentation
-                text.append(Component.literal(entry.getKey() + ": ").withStyle(s -> s.withColor(ChatFormatting.AQUA).withUnderlined(false)));
+                text.append(literalText("   ").withStyle(s -> s.withUnderlined(false))); // Indentation
+                text.append(literalText(entry.getKey() + ": ").withStyle(s -> s.withColor(ChatFormatting.AQUA).withUnderlined(false)));
                 text.append(formatSimpleValue(entry.getValue(), childType).withStyle(s -> s.withUnderlined(false)));
             }
 
@@ -227,7 +230,7 @@ public class ComponentUtil {
 
     private static MutableComponent formatSimpleValue(Object obj, ValueType valueType) {
         String str = QconfUtil.stringify(obj);
-        MutableComponent baseText = Component.literal(str);
+        MutableComponent baseText = literalText(str);
         if(valueType == ValueType.BOOLEAN) {
             if(str.equals("true")) return baseText.withStyle(ChatFormatting.GREEN);
             else return baseText.withStyle(ChatFormatting.RED);
@@ -243,12 +246,12 @@ public class ComponentUtil {
             ColorUtil.ArgbColor color = ColorUtil.toArgbColor(unquotedString, true);
             int rgb = color.pack();
 
-            MutableComponent finalText = Component.literal("#").withStyle(Style.EMPTY.withColor(rgb));
+            MutableComponent finalText = literalText("#").withStyle(Style.EMPTY.withColor(TextColor.fromRgb(rgb)));
 
-            MutableComponent aPreview = Component.literal(ColorUtil.colorToHex(color.alpha()).toUpperCase(Locale.ROOT));
-            MutableComponent rPreview = Component.literal(ColorUtil.colorToHex(color.red()).toUpperCase(Locale.ROOT));
-            MutableComponent gPreview = Component.literal(ColorUtil.colorToHex(color.green()).toUpperCase(Locale.ROOT));
-            MutableComponent bPreview = Component.literal(ColorUtil.colorToHex(color.blue()).toUpperCase(Locale.ROOT));
+            MutableComponent aPreview = literalText(ColorUtil.colorToHex(color.alpha()).toUpperCase(Locale.ROOT));
+            MutableComponent rPreview = literalText(ColorUtil.colorToHex(color.red()).toUpperCase(Locale.ROOT));
+            MutableComponent gPreview = literalText(ColorUtil.colorToHex(color.green()).toUpperCase(Locale.ROOT));
+            MutableComponent bPreview = literalText(ColorUtil.colorToHex(color.blue()).toUpperCase(Locale.ROOT));
 
             if(hasAlpha) finalText.append(aPreview);
             finalText.append(rPreview);

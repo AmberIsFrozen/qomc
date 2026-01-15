@@ -2,7 +2,6 @@ package com.lx862.qomc.core;
 
 import com.lx862.qomc.Platform;
 import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
 
 import java.util.ArrayList;
@@ -22,7 +21,7 @@ public class CommandFeedback {
     }
 
     public void addEmptyLine() {
-        add(Component.empty());
+        add(Platform.emptyText());
     }
 
     public void send(CommandSourceStack commandSourceStack, boolean broadcastToOp) {
