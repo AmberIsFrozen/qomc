@@ -64,6 +64,9 @@ public class QconfUtil {
         if(o instanceof String) {
             return "\"" + o + "\"";
         }
+        if(o instanceof Enum<?>) {
+            return ((Enum<?>)o).name();
+        }
         return o.toString();
     }
 
