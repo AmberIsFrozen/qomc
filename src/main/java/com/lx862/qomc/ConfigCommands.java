@@ -30,8 +30,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ConfigCommands {
     public static LiteralArgumentBuilder<CommandSourceStack> buildModNode(ModInfo modInfo, String commandLiteral, List<Config> configs) {
-        LiteralArgumentBuilder<CommandSourceStack> rootNode = Commands.literal(commandLiteral)
-        .requires(source -> source.hasPermission(4));
+        LiteralArgumentBuilder<CommandSourceStack> rootNode = Platform.requireMaxPermissionLevel(Commands.literal(commandLiteral));
 
         for(Config config : configs) {
             ConfigTree configTree = ConfigTree.of(config);

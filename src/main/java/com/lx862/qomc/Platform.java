@@ -2,6 +2,7 @@ package com.lx862.qomc;
 
 import com.lx862.qomc.util.ModInfo;
 import com.mojang.brigadier.CommandDispatcher;
+import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.fabricmc.loader.api.FabricLoader;
 import net.fabricmc.loader.api.metadata.ModMetadata;
@@ -15,6 +16,10 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class Platform {
+    public static LiteralArgumentBuilder<CommandSourceStack> requireMaxPermissionLevel(LiteralArgumentBuilder<CommandSourceStack> ctx) {
+        return ctx.requires(source -> source.hasPermission(4));
+    }
+
     public static void sendFeedback(CommandSourceStack source, Supplier<Component> getText, boolean broadcastToOp) {
         source.sendSuccess(getText, broadcastToOp);
     }
