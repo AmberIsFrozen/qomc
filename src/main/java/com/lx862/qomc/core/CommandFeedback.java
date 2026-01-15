@@ -1,6 +1,6 @@
 package com.lx862.qomc.core;
 
-import com.lx862.qomc.Platform;
+import com.lx862.qomc.util.VersionUtil;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.MutableComponent;
 
@@ -21,12 +21,12 @@ public class CommandFeedback {
     }
 
     public void addEmptyLine() {
-        add(Platform.emptyText());
+        add(VersionUtil.emptyText());
     }
 
     public void send(CommandSourceStack commandSourceStack, boolean broadcastToOp) {
         for(MutableComponent component : components) {
-            Platform.sendFeedback(commandSourceStack, () -> component, broadcastToOp);
+            VersionUtil.sendFeedback(commandSourceStack, () -> component, broadcastToOp);
         }
     }
 }

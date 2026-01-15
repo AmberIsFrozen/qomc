@@ -5,10 +5,7 @@ import com.lx862.qomc.core.ConfigTree;
 import com.lx862.qomc.core.ConfigSectionTree;
 import com.lx862.qomc.core.ValueType;
 import com.lx862.qomc.exception.ConfigFailException;
-import com.lx862.qomc.util.ColorUtil;
-import com.lx862.qomc.util.ComponentUtil;
-import com.lx862.qomc.util.ModInfo;
-import com.lx862.qomc.util.QconfUtil;
+import com.lx862.qomc.util.*;
 import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -27,11 +24,11 @@ import net.minecraft.network.chat.Style;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import static com.lx862.qomc.Platform.literalText;
+import static com.lx862.qomc.util.VersionUtil.literalText;
 
 public class ConfigCommands {
     public static LiteralArgumentBuilder<CommandSourceStack> buildModNode(ModInfo modInfo, String commandLiteral, List<Config> configs) {
-        LiteralArgumentBuilder<CommandSourceStack> rootNode = Platform.requireMaxPermissionLevel(Commands.literal(commandLiteral));
+        LiteralArgumentBuilder<CommandSourceStack> rootNode = VersionUtil.requireMaxPermissionLevel(Commands.literal(commandLiteral));
 
         for(Config config : configs) {
             ConfigTree configTree = ConfigTree.of(config);
@@ -273,7 +270,7 @@ public class ConfigCommands {
         if(sectionTree.node() != null) { // Root node would be null
             MutableComponent sectionText = literalText("[" + QconfUtil.getSerializedName(sectionTree.node()) + "]")
                     .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN));
-            sectionText.withStyle(s -> s.withHoverEvent(Platform.hoverEventText(ComponentUtil.configNodeTooltip(sectionTree.node()))));
+            sectionText.withStyle(s -> s.withHoverEvent(VersionUtil.hoverEventText(ComponentUtil.configNodeTooltip(sectionTree.node()))));
 
             feedback.addEmptyLine();
             feedback.add(literalText(indentStr).append(sectionText));
@@ -293,8 +290,8 @@ public class ConfigCommands {
             feedback.add(
                 literalText(indentStr).append(ComponentUtil.valueOverview(trackedValue, valueType)
                 .withStyle(s ->
-                        s.withHoverEvent(Platform.hoverEventText(ComponentUtil.configNodeTooltip(trackedValue)))
-                                .withClickEvent(Platform.clickEventSuggestCommand(command.toString()))
+                        s.withHoverEvent(VersionUtil.hoverEventText(ComponentUtil.configNodeTooltip(trackedValue)))
+                                .withClickEvent(VersionUtil.clickEventSuggestCommand(command.toString()))
                 )
             ));
         }
@@ -312,7 +309,7 @@ public class ConfigCommands {
         feedback.addEmptyLine();
         feedback.add(ComponentUtil.currentValue(trackedValue, valueType)
                 .withStyle(s -> s.withHoverEvent(
-                        Platform.hoverEventText(
+                        VersionUtil.hoverEventText(
                                 ComponentUtil.valueType(valueType)
                                 .append(ComponentUtil.constraints(trackedValue.constraints()))
                         )
@@ -330,7 +327,7 @@ public class ConfigCommands {
             Style.EMPTY
                     .withColor(ChatFormatting.GOLD)
                     .withUnderlined(true)
-                    .withClickEvent(Platform.clickEventSuggestCommand(commandToString(ctx)))
+                    .withClickEvent(VersionUtil.clickEventSuggestCommand(commandToString(ctx)))
         );
 
         feedback.add(changeText);
@@ -359,8 +356,8 @@ public class ConfigCommands {
             feedback.add(
                     ComponentUtil.valueOverview(trackedValue, valueType)
                     .withStyle(s ->
-                            s.withHoverEvent(Platform.hoverEventText(ComponentUtil.configNodeTooltip(trackedValue)))
-                                    .withClickEvent(Platform.clickEventSuggestCommand(command))
+                            s.withHoverEvent(VersionUtil.hoverEventText(ComponentUtil.configNodeTooltip(trackedValue)))
+                                    .withClickEvent(VersionUtil.clickEventSuggestCommand(command))
                     )
             );
         }
@@ -374,10 +371,10 @@ public class ConfigCommands {
     private static <T> int configSetValue(CommandContext<CommandSourceStack> ctx, TrackedValue<T> trackedValue, ValueType valueType, T newValue) {
         try {
             setValue(trackedValue, newValue);
-            Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configFeedback(trackedValue, valueType), false);
+            VersionUtil.sendFeedback(ctx.getSource(), () -> ComponentUtil.configFeedback(trackedValue, valueType), false);
             return 1;
         } catch (ConfigFailException exception) {
-            Platform.sendFailure(ctx.getSource(), exception.component());
+            VersionUtil.sendFailure(ctx.getSource(), exception.component());
             return 0;
         }
     }
@@ -386,7 +383,7 @@ public class ConfigCommands {
         try {
             return configSetValue(ctx, trackedValue, isARGB ? ValueType.COLOR_ARGB : ValueType.COLOR_RGB, ColorUtil.colorToHex(ColorUtil.toArgbColor(input, isARGB), isARGB));
         } catch (NumberFormatException e) {
-            Platform.sendFailure(ctx.getSource(), literalText("Invalid RGB Hex color format: " + input).withStyle(ChatFormatting.RED));
+            VersionUtil.sendFailure(ctx.getSource(), literalText("Invalid RGB Hex color format: " + input).withStyle(ChatFormatting.RED));
             return 0;
         }
     }
@@ -400,18 +397,18 @@ public class ConfigCommands {
         newList.add(item);
         try {
             setValue(value, newList);
-            Platform.sendFeedback(ctx.getSource(), () -> literalText("Inserted ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(literalText(" to list!")), false);
-            Platform.sendFeedback(ctx.getSource(), () -> literalText("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.LIST)), false);
+            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("Inserted ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(literalText(" to list!")), false);
+            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.LIST)), false);
             return 1;
         } catch (ConfigFailException exception) {
-            Platform.sendFailure(ctx.getSource(), exception.component());
+            VersionUtil.sendFailure(ctx.getSource(), exception.component());
             return 0;
         }
     }
 
     private static <T> int configRemoveList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item, ValueType childType) {
         if(!value.value().contains(item)) {
-            Platform.sendFeedback(ctx.getSource(), () -> literalText("Value \"" + item + "\" is not in list " + QconfUtil.getDisplayName(value)).withStyle(ChatFormatting.RED), false);
+            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("Value \"" + item + "\" is not in list " + QconfUtil.getDisplayName(value)).withStyle(ChatFormatting.RED), false);
             return 0;
         }
         ValueList<T> newList = (ValueList<T>) value.value().copy();
@@ -420,11 +417,11 @@ public class ConfigCommands {
         try {
             setValue(value, newList);
 
-            Platform.sendFeedback(ctx.getSource(), () -> literalText("Removed ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(literalText(" from list!")), false);
-            Platform.sendFeedback(ctx.getSource(), () -> literalText("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.LIST)), false);
+            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("Removed ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(literalText(" from list!")), false);
+            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.LIST)), false);
             return 1;
         } catch (ConfigFailException exception) {
-            Platform.sendFailure(ctx.getSource(), exception.component());
+            VersionUtil.sendFailure(ctx.getSource(), exception.component());
             return 0;
         }
     }
@@ -436,18 +433,18 @@ public class ConfigCommands {
         try {
             setValue(value, newMap);
 
-            Platform.sendFeedback(ctx.getSource(), () -> literalText("\"" + key + "\" set to ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(" in map!"), false);
-            Platform.sendFeedback(ctx.getSource(), () -> literalText("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.MAP)), false);
+            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("\"" + key + "\" set to ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(" in map!"), false);
+            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.MAP)), false);
             return 1;
         } catch (ConfigFailException exception) {
-            Platform.sendFeedback(ctx.getSource(), exception::component, false);
+            VersionUtil.sendFeedback(ctx.getSource(), exception::component, false);
             return 0;
         }
     }
 
     private static <T> int configRemoveMap(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueMap<T>> value, String key, ValueType childType) {
         if(!value.value().containsKey(key)) {
-            Platform.sendFeedback(ctx.getSource(), () -> literalText("Value \"" + key + "\" is not in the map!").withStyle(ChatFormatting.RED), false);
+            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("Value \"" + key + "\" is not in the map!").withStyle(ChatFormatting.RED), false);
             return 0;
         }
         ValueMap<T> newMap = (ValueMap<T>)value.value().copy();
@@ -456,11 +453,11 @@ public class ConfigCommands {
         try {
             setValue(value, newMap);
 
-            Platform.sendFeedback(ctx.getSource(), () -> literalText("Removed \"" + key + "\" with value ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, removedValue, childType)).append(" from map!"), false);
-            Platform.sendFeedback(ctx.getSource(), () -> literalText("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.MAP)), false);
+            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("Removed \"" + key + "\" with value ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, removedValue, childType)).append(" from map!"), false);
+            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.MAP)), false);
             return 1;
         } catch (ConfigFailException exception) {
-            Platform.sendFeedback(ctx.getSource(), exception::component, false);
+            VersionUtil.sendFeedback(ctx.getSource(), exception::component, false);
             return 0;
         }
     }

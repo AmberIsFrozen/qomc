@@ -1,6 +1,5 @@
 package com.lx862.qomc.util;
 
-import com.lx862.qomc.Platform;
 import com.lx862.qomc.core.ValueType;
 import folk.sisby.kaleido.lib.quiltconfig.api.Config;
 import folk.sisby.kaleido.lib.quiltconfig.api.Constraint;
@@ -19,7 +18,7 @@ import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.TextColor;
 
-import static com.lx862.qomc.Platform.*;
+import static com.lx862.qomc.util.VersionUtil.*;
 
 public class ComponentUtil {
     public static Component configFeedback(TrackedValue<?> value, ValueType valueType) {
@@ -47,7 +46,7 @@ public class ComponentUtil {
             }
 
             if(i != node.key().length()-1) { // Add hover text
-                nodeText.withStyle(s -> s.withHoverEvent(Platform.hoverEventText(configNodeTooltip(breadcrumbNode))));
+                nodeText.withStyle(s -> s.withHoverEvent(VersionUtil.hoverEventText(configNodeTooltip(breadcrumbNode))));
             }
 
             fieldHeader.append(nodeText);
@@ -154,7 +153,7 @@ public class ComponentUtil {
         if(valueOverriden) {
             valueStatusText = literalText("(Overriden)")
                     .withStyle(s ->
-                            s.withHoverEvent(Platform.hoverEventText(
+                            s.withHoverEvent(VersionUtil.hoverEventText(
                                 literalText("Value is overridden by one or more mods.\nReal value: ").withStyle(ChatFormatting.YELLOW)
                                 .append(formatValue(trackedValue, trackedValue.getRealValue(), valueType))
                             ))
@@ -165,7 +164,7 @@ public class ComponentUtil {
         } else {
             valueStatusText = literalText("(Changed)")
                     .withStyle(s -> s.withHoverEvent(
-                            Platform.hoverEventText(
+                            VersionUtil.hoverEventText(
                                     literalText("Default: ").withStyle(ChatFormatting.GRAY)
                                     .append(formatValue(trackedValue, trackedValue.getDefaultValue(), valueType)))
                             )

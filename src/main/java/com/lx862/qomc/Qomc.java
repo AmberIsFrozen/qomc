@@ -4,10 +4,10 @@ import com.lx862.qomc.config.DemoConfig;
 import com.lx862.qomc.config.MainConfig;
 import com.lx862.qomc.util.ModInfo;
 import com.lx862.qomc.util.QconfUtil;
+import com.lx862.qomc.xplat.Platform;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
 import folk.sisby.kaleido.lib.quiltconfig.api.Config;
 import folk.sisby.kaleido.lib.quiltconfig.impl.util.ConfigsImpl;
-import net.fabricmc.api.ModInitializer;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 
@@ -21,25 +21,24 @@ import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
-public class Qomc implements ModInitializer {
+public class Qomc {
     //? if 1.16.5 {
     /*public static final Logger LOGGER = LogManager.getLogger("QoMC");
     *///? } else {
     public static final Logger LOGGER = LoggerFactory.getLogger("QoMC");
     //? }
 
-    @Override
-    public void onInitialize() {
+    public static void init() {
         MainConfig.init();
 
         if(MainConfig.INSTANCE.generateDemoConfig.value()) {
             DemoConfig.init();
         }
 
-        Platform.registerCommand(commandDispatcher -> {
+        Platform.INSTANCE.registerCommand(commandDispatcher -> {
             boolean unifiedNode = MainConfig.INSTANCE.unifiedConfigCommand.value();
 
-            Map<ModInfo, List<Config>> configGroup = probeModConfigs();
+            Map<ModInfo, List<Config>> configGroup = probeModConfigs(Platform.INSTANCE);
             List<LiteralArgumentBuilder<CommandSourceStack>> nodeToRegister = new ArrayList<>();
 
             for (Map.Entry<ModInfo, List<Config>> modConfigEntry : configGroup.entrySet()) {
@@ -64,7 +63,7 @@ public class Qomc implements ModInitializer {
         });
     }
 
-    private static Map<ModInfo, List<Config>> probeModConfigs() {
+    private static Map<ModInfo, List<Config>> probeModConfigs(Platform platform) {
         Map<ModInfo, List<Config>> configGroup = new HashMap<>();
 
         for(Config config : ConfigsImpl.getAll()) {
@@ -78,8 +77,8 @@ public class Qomc implements ModInitializer {
             );
             boolean modFound = false;
             for (String id : probeIds) {
-                if (Platform.modLoaded(id)) {
-                    List<Config> configs = configGroup.computeIfAbsent(Platform.getModInfo(id), k -> new ArrayList<>());
+                if (platform.modLoaded(id)) {
+                    List<Config> configs = configGroup.computeIfAbsent(platform.getModInfo(id), k -> new ArrayList<>());
                     configs.add(config);
                     modFound = true;
                     break;

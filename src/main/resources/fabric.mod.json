@@ -3,7 +3,7 @@
 	"id": "${id}",
 	"version": "${version}",
 	"name": "${name}",
-	"description": "Qconf over Minecraft Commands!",
+	"description": "Auto-generated config commands for mods using Kaleido/Qconf.",
 	"authors": [
 		"AmberFrost"
 	],
@@ -16,7 +16,7 @@
 	"environment": "*",
 	"entrypoints": {
 		"main": [
-          "com.lx862.qomc.Qomc"
+          "com.lx862.qomc.xplat.fabric.QomcFabric"
 		],
 		"client": [
 		]

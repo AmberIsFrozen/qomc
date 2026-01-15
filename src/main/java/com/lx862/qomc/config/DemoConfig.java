@@ -1,6 +1,6 @@
 package com.lx862.qomc.config;
 
-import com.lx862.qomc.Platform;
+import com.lx862.qomc.xplat.Platform;
 import folk.sisby.kaleido.api.ReflectiveConfig;
 import folk.sisby.kaleido.lib.quiltconfig.api.annotations.ChangeWarning;
 import folk.sisby.kaleido.lib.quiltconfig.api.annotations.Comment;
@@ -14,7 +14,7 @@ import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueMap;
 
 @SerializedNameConvention(NamingSchemes.SNAKE_CASE)
 public class DemoConfig extends ReflectiveConfig {
-    private static final DemoConfig INSTANCE = DemoConfig.createToml(Platform.getConfigPath(), "qomc", "demo", DemoConfig.class);
+    private static final DemoConfig INSTANCE = DemoConfig.createToml(Platform.INSTANCE.getConfigPath(), "qomc", "demo", DemoConfig.class);
 
     @Comment("Demonstration of the different object type supported by QoMC")
     public final FieldType fieldType = new FieldType();

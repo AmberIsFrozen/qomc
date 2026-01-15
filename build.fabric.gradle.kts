@@ -2,7 +2,7 @@ plugins {
     id("net.fabricmc.fabric-loom-remap")
 }
 
-version = "${property("mod.version")}+${sc.current.version}"
+version = "${property("mod.version")}+${sc.current.version}-fabric"
 base.archivesName = property("mod.id") as String
 
 val requiredJava = when {

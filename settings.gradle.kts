@@ -4,7 +4,10 @@ pluginManagement {
         mavenCentral()
         gradlePluginPortal()
         maven("https://maven.fabricmc.net/")
+        maven("https://maven.neoforged.net/releases/") { name = "NeoForged" }
         maven("https://maven.kikugie.dev/snapshots") { name = "KikuGie Snapshots" }
+        maven("https://maven.kikugie.dev/releases") { name = "KikuGie Releases" }
+        maven("https://maven.parchmentmc.org") { name = "ParchmentMC" }
     }
 }
 
@@ -14,9 +17,17 @@ plugins {
 
 stonecutter {
     create(rootProject) {
+        var combos = listOf("1.16.5-fabric", "1.18.2-fabric", "1.19.4-fabric", "1.21.1-fabric", "1.21.5-fabric", "1.21.11-fabric",
+            "1.21.1-neoforge")
+
+        combos.forEach {
+            val ver = it.split("-")[0]
+            val loader = it.split("-")[1]
+            version(it, ver).buildscript("build.${loader}.gradle.kts")
+        }
+
         // See https://stonecutter.kikugie.dev/wiki/start/#choosing-minecraft-versions
-        versions("1.16.5", "1.18.2", "1.19.4", "1.21.1", "1.21.5", "1.21.11")
-        vcsVersion = "1.21.1"
+        vcsVersion = "1.21.1-fabric"
     }
 }
 
