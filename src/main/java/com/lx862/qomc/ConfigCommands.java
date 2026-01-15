@@ -8,7 +8,6 @@ import com.lx862.qomc.util.ColorUtil;
 import com.lx862.qomc.util.ComponentUtil;
 import com.lx862.qomc.util.ModInfo;
 import com.lx862.qomc.util.QconfUtil;
-import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.*;
 import com.mojang.brigadier.builder.ArgumentBuilder;
 import com.mojang.brigadier.builder.LiteralArgumentBuilder;
@@ -29,18 +28,21 @@ import java.util.*;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class ConfigCommands {
-    public static LiteralArgumentBuilder<CommandSourceStack> buildModNode(ModInfo modInfo, String commandLiteral, List<Config> configs, CommandDispatcher<CommandSourceStack> ctx) {
+    public static LiteralArgumentBuilder<CommandSourceStack> buildModNode(ModInfo modInfo, String commandLiteral, List<Config> configs) {
         LiteralArgumentBuilder<CommandSourceStack> rootNode = Commands.literal(commandLiteral)
         .requires(source -> source.hasPermission(4));
 
         for(Config config : configs) {
+            ConfigTree configTree = ConfigTree.of(config);
             if(configs.size() == 1) { // Mod with single config
-                for(LiteralArgumentBuilder<CommandSourceStack> valueNode : buildConfigNodes(config)) {
+                rootNode.executes(ctx -> printConfig(ctx, config, configTree, modInfo));
+                for(LiteralArgumentBuilder<CommandSourceStack> valueNode : buildConfigNodes(config, configTree)) {
                     rootNode.then(valueNode);
                 }
             } else {
                 LiteralArgumentBuilder<CommandSourceStack> configNode = Commands.literal(config.id());
-                for(LiteralArgumentBuilder<CommandSourceStack> valueNodes : buildConfigNodes(config)) {
+                configNode.executes(ctx -> printConfig(ctx, config, configTree, modInfo));
+                for(LiteralArgumentBuilder<CommandSourceStack> valueNodes : buildConfigNodes(config, configTree)) {
                     configNode.then(valueNodes);
                 }
                 rootNode.then(configNode);
@@ -50,9 +52,7 @@ public class ConfigCommands {
         return rootNode;
     }
 
-    public static List<LiteralArgumentBuilder<CommandSourceStack>> buildConfigNodes(Config config) {
-        ConfigTree configTree = ConfigTree.of(config);
-
+    public static List<LiteralArgumentBuilder<CommandSourceStack>> buildConfigNodes(Config config, ConfigTree configTree) {
         List<LiteralArgumentBuilder<CommandSourceStack>> nodes = new ArrayList<>();
         for(TrackedValue<?> field : configTree.rootSection().fields()) {
             nodes.add(buildFieldNode(config, field));
@@ -245,6 +245,56 @@ public class ConfigCommands {
         return nodes;
     }
 
+    private static int printConfig(CommandContext<CommandSourceStack> ctx, Config config, ConfigTree configTree, ModInfo modInfo) {
+        Platform.sendFeedback(ctx.getSource(), () -> Component.empty().withStyle(ChatFormatting.GRAY), false);
+        if(modInfo != null) {
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal(modInfo.name()).withStyle(ChatFormatting.BOLD).append(" ").append(Component.literal(modInfo.version()).withStyle(s -> s.withBold(false).withColor(ChatFormatting.GRAY))), false);
+        }
+        String configName = QconfUtil.getDisplayName(config, config.id());
+        MutableComponent configLocation = Component.literal("(" + QconfUtil.getShortPath(config) + ")").withStyle(s -> s.withColor(ChatFormatting.YELLOW).withBold(false));
+        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Config: ").withStyle(ChatFormatting.BOLD).append(Component.literal(configName).withStyle(s -> s.withBold(false))).append(" ").append(configLocation), false);
+        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("--------------------------").withStyle(ChatFormatting.GRAY), false);
+
+        printConfigInternal(ctx, config, configTree.rootSection(), -1);
+        return 1;
+    }
+
+    private static void printConfigInternal(CommandContext<CommandSourceStack> ctx, Config config, ConfigSectionTree sectionTree, int nestedLevel) {
+        String indentStr = " ".repeat(Math.max(0, nestedLevel*3));
+
+        if(sectionTree.node() != null) { // Root node would be null
+            MutableComponent sectionText = Component.literal("[" + QconfUtil.getSerializedName(sectionTree.node()) + "]")
+                    .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN));
+            sectionText.withStyle(s -> s.withHoverEvent(Platform.hoverEventText(ComponentUtil.configNodeTooltip(sectionTree.node()))));
+
+            Platform.sendFeedback(ctx.getSource(), Component::empty, false);
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal(indentStr).append(sectionText), false);
+        }
+
+        for(TrackedValue<?> trackedValue : sectionTree.fields()) {
+            ValueType valueType = ValueType.getType(trackedValue, trackedValue.getDefaultValue());
+            StringBuilder command = new StringBuilder(commandToString(ctx));
+
+            for(int i = 0; i < trackedValue.key().length(); i++) {
+                ValueKey key = QconfUtil.trimKey(trackedValue.key(), trackedValue.key().length() - 1 - i);
+                ValueTreeNode valueTreeNode = config.getNode(key);
+                String nodeName = valueTreeNode instanceof ValueTreeNode.Section ? "[" + QconfUtil.getSerializedName(valueTreeNode) + "]" : QconfUtil.getSerializedName(valueTreeNode);
+                command.append(nodeName).append(" ");
+            }
+
+            Platform.sendFeedback(ctx.getSource(), () -> Component.literal(indentStr).append(ComponentUtil.valueOverview(trackedValue, valueType)
+                    .withStyle(s ->
+                            s.withHoverEvent(Platform.hoverEventText(ComponentUtil.configNodeTooltip(trackedValue)))
+                                    .withClickEvent(Platform.clickEventSuggestCommand(command.toString()))
+                    )
+            ), false);
+        }
+
+        for(ConfigSectionTree subSection : sectionTree.sections().values()) {
+            printConfigInternal(ctx, config, subSection, nestedLevel+1);
+        }
+    }
+
     private static int printField(CommandContext<CommandSourceStack> ctx, Config config, TrackedValue<?> trackedValue, ValueType valueType) {
         Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeBreadcrumb(config, trackedValue), false);
         Platform.sendFeedbacks(ctx.getSource(), ComponentUtil.configNodeComments(trackedValue), false);
@@ -314,7 +364,6 @@ public class ConfigCommands {
     }
 
     private static int configSetColorHex(CommandContext<CommandSourceStack> ctx, TrackedValue<String> trackedValue, String input, boolean isARGB) {
-
         try {
             return configSetValue(ctx, trackedValue, isARGB ? ValueType.COLOR_ARGB : ValueType.COLOR_RGB, ColorUtil.colorToHex(ColorUtil.toArgbColor(input, isARGB), isARGB));
         } catch (NumberFormatException e) {

@@ -36,7 +36,7 @@ public class Qomc implements ModInitializer {
                 ModInfo belongingMod = modConfigEntry.getKey();
                 List<Config> modConfigs = modConfigEntry.getValue();
 
-                nodeToRegister.add(ConfigCommands.buildModNode(belongingMod, belongingMod.id() + (unifiedNode ? "" : "Config"), modConfigs, commandDispatcher));
+                nodeToRegister.add(ConfigCommands.buildModNode(belongingMod, belongingMod.id() + (unifiedNode ? "" : "Config"), modConfigs));
             }
 
             if(unifiedNode) {

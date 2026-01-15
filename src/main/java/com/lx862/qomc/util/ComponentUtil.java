@@ -78,7 +78,7 @@ public class ComponentUtil {
 
     public static <T> MutableComponent valueOverview(TrackedValue<T> trackedValue, ValueType valueType) {
         MutableComponent text = Component.literal("* ").withStyle(Style.EMPTY.withColor(ChatFormatting.YELLOW));
-        MutableComponent valueName = Component.literal(trackedValue.key().getLastComponent()).withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(false));
+        MutableComponent valueName = Component.literal(QconfUtil.getSerializedName(trackedValue)).withStyle(Style.EMPTY.withColor(ChatFormatting.GRAY).withBold(false));
 
         MutableComponent t3 = Component.literal(": ").withStyle(Style.EMPTY.withColor(ChatFormatting.WHITE).withBold(false));
         MutableComponent t4 = formatValue(trackedValue, trackedValue.value(), valueType).withStyle(Style.EMPTY.withBold(false).withUnderlined(!Objects.equals(trackedValue.value(), trackedValue.getDefaultValue())));

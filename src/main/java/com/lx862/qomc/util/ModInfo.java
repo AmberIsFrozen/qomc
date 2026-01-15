@@ -4,12 +4,12 @@ import java.util.Objects;
 
 public final class ModInfo {
     private final String name;
-    private final String description;
+    private final String version;
     private final String id;
 
-    public ModInfo(String name, String description, String id) {
+    public ModInfo(String name, String version, String id) {
         this.name = name;
-        this.description = description;
+        this.version = version;
         this.id = id;
     }
 
@@ -17,8 +17,8 @@ public final class ModInfo {
         return this.name;
     }
 
-    public String description() {
-        return this.description;
+    public String version() {
+        return this.version;
     }
 
     public String id() {
@@ -35,6 +35,6 @@ public final class ModInfo {
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, description, id);
+        return Objects.hash(name, version, id);
     }
 }

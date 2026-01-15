@@ -50,7 +50,7 @@ public class Platform {
 
     public static ModInfo getModInfo(String id) {
         ModMetadata modMetadata = FabricLoader.getInstance().getModContainer(id).get().getMetadata();
-        return new ModInfo(modMetadata.getName(), modMetadata.getDescription(), modMetadata.getId());
+        return new ModInfo(modMetadata.getName(), modMetadata.getVersion().getFriendlyString(), modMetadata.getId());
     }
 
     public static Path getConfigPath() {

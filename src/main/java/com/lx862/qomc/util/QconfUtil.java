@@ -66,4 +66,8 @@ public class QconfUtil {
         }
         return o.toString();
     }
+
+    public static String getShortPath(Config config) {
+        return (config.family().isEmpty() ? config.id() : config.family() + "/" + config.id()) + ".toml";
+    }
 }
