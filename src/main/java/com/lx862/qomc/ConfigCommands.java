@@ -1,5 +1,6 @@
 package com.lx862.qomc;
 
+import com.lx862.qomc.core.CommandFeedback;
 import com.lx862.qomc.core.ConfigTree;
 import com.lx862.qomc.core.ConfigSectionTree;
 import com.lx862.qomc.core.ValueType;
@@ -246,20 +247,24 @@ public class ConfigCommands {
     }
 
     private static int printConfig(CommandContext<CommandSourceStack> ctx, Config config, ConfigTree configTree, ModInfo modInfo) {
-        Platform.sendFeedback(ctx.getSource(), () -> Component.empty().withStyle(ChatFormatting.GRAY), false);
+        CommandFeedback feedback = new CommandFeedback();
+
+        feedback.add(Component.empty().withStyle(ChatFormatting.GRAY));
         if(modInfo != null) {
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal(modInfo.name()).withStyle(ChatFormatting.BOLD).append(" ").append(Component.literal(modInfo.version()).withStyle(s -> s.withBold(false).withColor(ChatFormatting.GRAY))), false);
+            feedback.add(Component.literal(modInfo.name()).withStyle(ChatFormatting.BOLD).append(" ").append(Component.literal(modInfo.version()).withStyle(s -> s.withBold(false).withColor(ChatFormatting.GRAY))));
         }
         String configName = QconfUtil.getDisplayName(config, config.id());
         MutableComponent configLocation = Component.literal("(" + QconfUtil.getShortPath(config) + ")").withStyle(s -> s.withColor(ChatFormatting.YELLOW).withBold(false));
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("Config: ").withStyle(ChatFormatting.BOLD).append(Component.literal(configName).withStyle(s -> s.withBold(false))).append(" ").append(configLocation), false);
-        Platform.sendFeedback(ctx.getSource(), () -> Component.literal("--------------------------").withStyle(ChatFormatting.GRAY), false);
+        feedback.add(Component.literal("Config: ").withStyle(ChatFormatting.BOLD).append(Component.literal(configName).withStyle(s -> s.withBold(false))).append(" ").append(configLocation));
+        feedback.add(Component.literal("--------------------------").withStyle(ChatFormatting.GRAY));
 
-        printConfigInternal(ctx, config, configTree.rootSection(), -1);
+        printConfigInternal(ctx, feedback, config, configTree.rootSection(), -1);
+        feedback.addEmptyLine();
+        feedback.send(ctx.getSource(), false);
         return 1;
     }
 
-    private static void printConfigInternal(CommandContext<CommandSourceStack> ctx, Config config, ConfigSectionTree sectionTree, int nestedLevel) {
+    private static void printConfigInternal(CommandContext<CommandSourceStack> ctx, CommandFeedback feedback, Config config, ConfigSectionTree sectionTree, int nestedLevel) {
         String indentStr = " ".repeat(Math.max(0, nestedLevel*3));
 
         if(sectionTree.node() != null) { // Root node would be null
@@ -267,8 +272,8 @@ public class ConfigCommands {
                     .withStyle(Style.EMPTY.withColor(ChatFormatting.GREEN));
             sectionText.withStyle(s -> s.withHoverEvent(Platform.hoverEventText(ComponentUtil.configNodeTooltip(sectionTree.node()))));
 
-            Platform.sendFeedback(ctx.getSource(), Component::empty, false);
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal(indentStr).append(sectionText), false);
+            feedback.addEmptyLine();
+            feedback.add(Component.literal(indentStr).append(sectionText));
         }
 
         for(TrackedValue<?> trackedValue : sectionTree.fields()) {
@@ -282,37 +287,40 @@ public class ConfigCommands {
                 command.append(nodeName).append(" ");
             }
 
-            Platform.sendFeedback(ctx.getSource(), () -> Component.literal(indentStr).append(ComponentUtil.valueOverview(trackedValue, valueType)
-                    .withStyle(s ->
-                            s.withHoverEvent(Platform.hoverEventText(ComponentUtil.configNodeTooltip(trackedValue)))
-                                    .withClickEvent(Platform.clickEventSuggestCommand(command.toString()))
-                    )
-            ), false);
+            feedback.add(
+                Component.literal(indentStr).append(ComponentUtil.valueOverview(trackedValue, valueType)
+                .withStyle(s ->
+                        s.withHoverEvent(Platform.hoverEventText(ComponentUtil.configNodeTooltip(trackedValue)))
+                                .withClickEvent(Platform.clickEventSuggestCommand(command.toString()))
+                )
+            ));
         }
 
         for(ConfigSectionTree subSection : sectionTree.sections().values()) {
-            printConfigInternal(ctx, config, subSection, nestedLevel+1);
+            printConfigInternal(ctx, feedback, config, subSection, nestedLevel+1);
         }
     }
 
     private static int printField(CommandContext<CommandSourceStack> ctx, Config config, TrackedValue<?> trackedValue, ValueType valueType) {
-        Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeBreadcrumb(config, trackedValue), false);
-        Platform.sendFeedbacks(ctx.getSource(), ComponentUtil.configNodeComments(trackedValue), false);
+        CommandFeedback feedback = new CommandFeedback();
+        feedback.add(ComponentUtil.configNodeBreadcrumb(config, trackedValue));
+        feedback.add(ComponentUtil.configNodeComments(trackedValue));
 
-        Platform.sendFeedback(ctx.getSource(), Component::empty, false);
-        Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.currentValue(trackedValue, valueType)
+        feedback.addEmptyLine();
+        feedback.add(ComponentUtil.currentValue(trackedValue, valueType)
                 .withStyle(s -> s.withHoverEvent(
                         Platform.hoverEventText(
                                 ComponentUtil.valueType(valueType)
                                 .append(ComponentUtil.constraints(trackedValue.constraints()))
                         )
                     )
-                ), false);
-        Platform.sendFeedback(ctx.getSource(), Component::empty, false);
+                )
+        );
+        feedback.addEmptyLine();
 
         if(trackedValue.hasMetadata(ChangeWarning.TYPE)) {
-            Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeChangeWarning(trackedValue.metadata(ChangeWarning.TYPE)), false);
-            Platform.sendFeedback(ctx.getSource(), Component::empty, false);
+            feedback.add(ComponentUtil.configNodeChangeWarning(trackedValue.metadata(ChangeWarning.TYPE)));
+            feedback.addEmptyLine();
         }
 
         MutableComponent changeText = Component.literal("[\uD83D\uDD8A Change]").withStyle(
@@ -322,33 +330,41 @@ public class ConfigCommands {
                     .withClickEvent(Platform.clickEventSuggestCommand(commandToString(ctx)))
         );
 
-        Platform.sendFeedback(ctx.getSource(), () -> changeText, false);
-        Platform.sendFeedback(ctx.getSource(), Component::empty, false);
+        feedback.add(changeText);
+        feedback.addEmptyLine();
+
+        feedback.send(ctx.getSource(), false);
         return 1;
     }
 
     private static int printSection(CommandContext<CommandSourceStack> ctx, Config config, ValueTreeNode configSection, ConfigSectionTree sectionTree) {
-        Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeBreadcrumb(config, configSection), false);
-        Platform.sendFeedbacks(ctx.getSource(), ComponentUtil.configNodeComments(configSection), false);
-        Platform.sendFeedback(ctx.getSource(), Component::empty, false);
+        CommandFeedback feedback = new CommandFeedback();
+
+        feedback.add(ComponentUtil.configNodeBreadcrumb(config, configSection));
+        feedback.add(ComponentUtil.configNodeComments(configSection));
+        feedback.addEmptyLine();
 
         if(configSection.hasMetadata(ChangeWarning.TYPE)) {
-            Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.configNodeChangeWarning(configSection.metadata(ChangeWarning.TYPE)), false);
-            Platform.sendFeedback(ctx.getSource(), Component::empty, false);
+            feedback.add(ComponentUtil.configNodeChangeWarning(configSection.metadata(ChangeWarning.TYPE)));
+            feedback.addEmptyLine();
         }
 
         for(TrackedValue<?> trackedValue : sectionTree.fields()) {
             ValueType valueType = ValueType.getType(trackedValue, trackedValue.getDefaultValue());
             String command = commandToString(ctx) + QconfUtil.getSerializedName(trackedValue);
 
-            Platform.sendFeedback(ctx.getSource(), () -> ComponentUtil.valueOverview(trackedValue, valueType)
+            feedback.add(
+                    ComponentUtil.valueOverview(trackedValue, valueType)
                     .withStyle(s ->
                             s.withHoverEvent(Platform.hoverEventText(ComponentUtil.configNodeTooltip(trackedValue)))
                                     .withClickEvent(Platform.clickEventSuggestCommand(command))
-                    ), false);
+                    )
+            );
         }
 
-        Platform.sendFeedback(ctx.getSource(), Component::empty, false);
+        feedback.addEmptyLine();
+
+        feedback.send(ctx.getSource(), false);
         return 1;
     }
 
