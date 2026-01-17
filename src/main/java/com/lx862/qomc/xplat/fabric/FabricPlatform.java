@@ -1,6 +1,7 @@
 package com.lx862.qomc.xplat.fabric;
 
 //? if fabric {
+import com.lx862.qomc.Qomc;
 import com.lx862.qomc.xplat.Platform;
 import com.lx862.qomc.util.ModInfo;
 import com.mojang.brigadier.CommandDispatcher;
@@ -24,7 +25,8 @@ public class FabricPlatform implements Platform {
     @Override
     public ModInfo getModInfo(String id) {
         ModMetadata modMetadata = FabricLoader.getInstance().getModContainer(id).get().getMetadata();
-        return new ModInfo(modMetadata.getName(), modMetadata.getVersion().getFriendlyString(), modMetadata.getId());
+        boolean modHidden = modMetadata.containsCustomValue(Qomc.MOD_ID + ":hidden");
+        return new ModInfo(modMetadata.getName(), modMetadata.getVersion().getFriendlyString(), modMetadata.getId(), modHidden);
     }
 
     @Override

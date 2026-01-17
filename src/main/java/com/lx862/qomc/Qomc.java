@@ -22,6 +22,7 @@ import org.slf4j.LoggerFactory;
 import java.util.*;
 
 public class Qomc {
+    public static String MOD_ID = "qomc";
     //? if 1.16.5 {
     /*public static final Logger LOGGER = LogManager.getLogger("QoMC");
     *///? } else {
@@ -44,6 +45,7 @@ public class Qomc {
             for (Map.Entry<ModInfo, List<Config>> modConfigEntry : configGroup.entrySet()) {
                 ModInfo belongingMod = modConfigEntry.getKey();
                 List<Config> modConfigs = modConfigEntry.getValue();
+                if(belongingMod.hidden()) continue;
 
                 nodeToRegister.add(ConfigCommands.buildModNode(belongingMod, belongingMod.id() + (unifiedNode ? "" : "_config"), modConfigs));
             }

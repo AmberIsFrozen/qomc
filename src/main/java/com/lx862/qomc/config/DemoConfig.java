@@ -30,6 +30,9 @@ public class DemoConfig extends ReflectiveConfig {
         public final TrackedValue<Float> floatValue = value(1f);
         public final TrackedValue<String> stringValue = value("Hello World");
 
+        @Comment("An enum value. Available options: [MOD, RESOURCE_PACKS, DATAPACK, SHADERS, PLUSH].")
+        public final TrackedValue<ContentType> enumValue = value(ContentType.MOD);
+
         @Matches("#[0-9A-Fa-f]{6}")
         @Comment("A string value, with a @Matches annotation of \"#[0-9A-Fa-f]{6}\", which will be picked up by QoMC as a RGB HEX color.")
         public final TrackedValue<String> rgbColorValue = value("#00FFFF");

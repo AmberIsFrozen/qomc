@@ -6,11 +6,13 @@ public final class ModInfo {
     private final String name;
     private final String version;
     private final String id;
+    private final boolean hidden;
 
-    public ModInfo(String name, String version, String id) {
+    public ModInfo(String name, String version, String id, boolean hidden) {
         this.name = name;
         this.version = version;
         this.id = id;
+        this.hidden = hidden;
     }
 
     public String name() {
@@ -25,6 +27,10 @@ public final class ModInfo {
         return this.id;
     }
 
+    public boolean hidden() {
+        return this.hidden;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == this) return true;
@@ -35,6 +41,6 @@ public final class ModInfo {
 
     @Override
     public int hashCode() {
-        return Objects.hash(name, version, id);
+        return Objects.hash(name, version, id, hidden);
     }
 }

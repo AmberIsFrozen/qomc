@@ -1,7 +1,8 @@
 package com.lx862.qomc.xplat.neoforge;
 
 //? neoforge {
-/*import com.lx862.qomc.xplat.Platform;
+/*import com.lx862.qomc.Qomc;
+import com.lx862.qomc.xplat.Platform;
 import com.lx862.qomc.util.ModInfo;
 import com.mojang.brigadier.CommandDispatcher;
 import net.minecraft.client.Minecraft;
@@ -24,7 +25,8 @@ public class NeoforgePlatform implements Platform {
     @Override
     public ModInfo getModInfo(String id) {
         IModInfo iModInfo = ModList.get().getModContainerById(id).get().getModInfo();
-        return new ModInfo(iModInfo.getDisplayName(), iModInfo.getVersion().toString(), iModInfo.getModId());
+        boolean modHidden = iModInfo.getModProperties().containsKey("hidden");
+        return new ModInfo(iModInfo.getDisplayName(), iModInfo.getVersion().toString(), iModInfo.getModId(), modHidden);
     }
 
     @Override
