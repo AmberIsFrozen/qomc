@@ -31,10 +31,7 @@ public class Qomc {
 
     public static void init() {
         MainConfig.init();
-
-        if(MainConfig.INSTANCE.generateDemoConfig.value()) {
-            DemoConfig.init();
-        }
+        DemoConfig.init();
 
         Platform.INSTANCE.registerCommand(commandDispatcher -> {
             boolean unifiedNode = MainConfig.INSTANCE.unifiedConfigCommand.value();

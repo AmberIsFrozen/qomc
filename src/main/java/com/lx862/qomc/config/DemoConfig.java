@@ -2,16 +2,14 @@ package com.lx862.qomc.config;
 
 import com.lx862.qomc.xplat.Platform;
 import folk.sisby.kaleido.api.ReflectiveConfig;
-import folk.sisby.kaleido.lib.quiltconfig.api.annotations.ChangeWarning;
-import folk.sisby.kaleido.lib.quiltconfig.api.annotations.Comment;
-import folk.sisby.kaleido.lib.quiltconfig.api.annotations.Matches;
-import folk.sisby.kaleido.lib.quiltconfig.api.annotations.SerializedNameConvention;
+import folk.sisby.kaleido.lib.quiltconfig.api.annotations.*;
 import folk.sisby.kaleido.lib.quiltconfig.api.metadata.NamingSchemes;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.TrackedValue;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueList;
 import folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning.Type;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.ValueMap;
 
+@DisplayName("Demo/Example Config")
 @SerializedNameConvention(NamingSchemes.SNAKE_CASE)
 public class DemoConfig extends ReflectiveConfig {
     private static final DemoConfig INSTANCE = DemoConfig.createToml(Platform.INSTANCE.getConfigPath(), "qomc", "demo", DemoConfig.class);
@@ -23,11 +21,26 @@ public class DemoConfig extends ReflectiveConfig {
     public final Special special = new Special();
 
     public static final class FieldType extends Section {
+        @Comment("A boolean value. Possible value is true/false.")
         public final TrackedValue<Boolean> boolValue = value(false);
+
+        @Comment("An integer value. Must be higher than -5000")
+        @IntegerRange(min = -5000, max = Integer.MAX_VALUE)
         public final TrackedValue<Integer> integerValue = value(0);
+
+        @Comment("A long value, positive value only.")
+        @IntegerRange(min = 0, max = Long.MAX_VALUE)
         public final TrackedValue<Long> longValue = value(1L);
+
+        @Comment("A double value. Range is limited from -100 to 100")
+        @FloatRange(min = -100, max = 100)
         public final TrackedValue<Double> doubleValue = value(1d);
+
+        @Comment("A float value. Range is limited from 0 to 100.")
+        @FloatRange(min = 0, max = 100)
         public final TrackedValue<Float> floatValue = value(1f);
+
+        @Comment("A string value.")
         public final TrackedValue<String> stringValue = value("Hello World");
 
         @Comment("An enum value. Available options: [MOD, RESOURCE_PACKS, DATAPACK, SHADERS, PLUSH].")
@@ -53,6 +66,11 @@ public class DemoConfig extends ReflectiveConfig {
         @Comment("A list of values making use of the @ChangeWarning annotations, prompting a remark for the user.")
         @Comment("Oh and this is a nested section!")
         public final ChangeWarnings changeWarnings = new ChangeWarnings();
+
+        @DisplayName("Custom Display Name")
+        @Comment("The @DisplayName annotation is supported (In this instance, configured to \"Custom Display Name\").")
+        @Comment("This will be reflected in config outputs, though the value name in config will still be used for command nodes.")
+        public final TrackedValue<String> displayName = value("Hello World");
     }
 
     public static final class ChangeWarnings extends Section {
