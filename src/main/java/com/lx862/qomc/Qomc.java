@@ -45,7 +45,7 @@ public class Qomc {
                 ModInfo belongingMod = modConfigEntry.getKey();
                 List<Config> modConfigs = modConfigEntry.getValue();
 
-                nodeToRegister.add(ConfigCommands.buildModNode(belongingMod, belongingMod.id() + (unifiedNode ? "" : "Config"), modConfigs));
+                nodeToRegister.add(ConfigCommands.buildModNode(belongingMod, belongingMod.id() + (unifiedNode ? "" : "_config"), modConfigs));
             }
 
             if(unifiedNode) {
