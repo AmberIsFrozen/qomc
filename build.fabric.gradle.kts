@@ -58,6 +58,8 @@ tasks {
         filesMatching("fabric.mod.json") {
             expand(props)
         }
+
+        exclude("**/neoforge.mods.toml")
     }
 
     // Builds the version into a shared folder in `build/libs/${mod version}/`
