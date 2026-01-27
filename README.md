@@ -1,6 +1,14 @@
-# QoMC
+# Qconf Over Minecraft Commands (QoMC)
 
-Auto-generated server-side config commands for Minecraft mods utilizing [Kaleido Config](https://github.com/sisby-folk/kaleido-config) (JiJ-safe implementation of Quilt Config)!
+<center>
+
+<img alt="preview" src="https://raw.githubusercontent.com/AmberIsFrozen/qomc/refs/heads/main/assets/thumb.png"/></br>
+<i>pull the lever, qomc!</i><br/>
+Auto-generated server-side config commands for Minecraft mods utilizing <a href="https://github.com/sisby-folk/kaleido-config">Kaleido Config</a> (JiJ-safe implementation of Quilt Config)!
+
+</center>
+
+---
 
 ## Some background
 A [number of mods](https://modrinth.com/collection/zZVgWFum) utilize a config library called **Kaleido Config**, which relieves the work from Mod Developers to implement config read/saving.
