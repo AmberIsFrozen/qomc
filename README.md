@@ -30,7 +30,7 @@ For mods with multiple config files, QoMC will split the commands by config, e.g
 ### IN MY DEFENSE, YOUR POISONS ALL LOOK ALIKE
 
 For devs, QoMC integration is implicit - just use [Kaleido Config](https://github.com/sisby-folk/kaleido-config) for configuration, and relevant commands will appear when QoMC is installed.<br/>
-QoMC is a purely optional runtime dependency, so don't on QoMC in your buildscripts or mod metadata - only on modrinth / curseforge.
+QoMC is a purely optional runtime dependency, so don't depend on QoMC in your buildscripts or mod metadata - only on modrinth / curseforge.
 
 If you've implemented your own config commands, you can disable discovery of your configs using a metadata key:
 
