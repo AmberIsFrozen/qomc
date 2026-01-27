@@ -17,12 +17,15 @@ plugins {
 
 stonecutter {
     create(rootProject) {
-        var combos = listOf("1.16.5-fabric", "1.18.2-fabric", "1.19.4-fabric", "1.21.1-fabric", "1.21.5-fabric", "1.21.11-fabric",
+        var combos = listOf("1.16.5-fabric", "1.18.2-fabric", "1.19.4-fabric", "1.20.1-forge", "1.21.1-fabric", "1.21.5-fabric", "1.21.11-fabric",
             "1.21.1-neoforge")
 
         combos.forEach {
             val ver = it.split("-")[0]
-            val loader = it.split("-")[1]
+            val majorVer = ver.split(".")[0]
+            val loaderString = it.split("-")[1]
+            val loader = if(majorVer.toInt() >= 26) "$loaderString-unobf" else loaderString
+
             version(it, ver).buildscript("build.${loader}.gradle.kts")
         }
 

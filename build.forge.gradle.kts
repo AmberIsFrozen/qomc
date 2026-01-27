@@ -1,7 +1,7 @@
 import org.gradle.kotlin.dsl.stonecutter
 
 plugins {
-    id("net.neoforged.moddev")
+    id("net.neoforged.moddev.legacyforge")
     id("dev.kikugie.postprocess.jsonlang")
 }
 
@@ -20,7 +20,7 @@ tasks.named<ProcessResources>("processResources") {
     }
 }
 
-version = "${property("mod.version")}+${sc.current.version}-neoforge"
+version = "${property("mod.version")}+${sc.current.version}-forge"
 base.archivesName = property("mod.id") as String
 
 jsonlang {
@@ -33,8 +33,8 @@ repositories {
     maven("https://repo.sleeping.town/")
 }
 
-neoForge {
-    version = property("deps.neoforge") as String
+legacyForge {
+    version = property("deps.forge") as String
     validateAccessTransformers = true
 
     if (hasProperty("deps.parchment")) parchment {
@@ -45,12 +45,12 @@ neoForge {
 
     runs {
         register("client") {
-            ideName = "Minecraft Client (:${sc.current.version}-neoforge)"
+            ideName = "Minecraft Client (:${sc.current.version}-forge)"
             gameDirectory = file("run/")
             client()
         }
         register("server") {
-            ideName = "Minecraft Server (:${sc.current.version}-neoforge)"
+            ideName = "Minecraft Server (:${sc.current.version}-forge)"
             gameDirectory = file("run/")
             server()
         }
@@ -61,18 +61,21 @@ neoForge {
             sourceSet(sourceSets["main"])
         }
     }
-    sourceSets["main"].resources.srcDir("src/main/generated")
 }
+sourceSets["main"].resources.srcDir("src/main/generated")
 
 dependencies {
     implementation("folk.sisby:kaleido-config:${property("deps.kaleido_config")}")
     jarJar("folk.sisby:kaleido-config:${property("deps.kaleido_config")}")
-    "additionalRuntimeClasspath"("folk.sisby:kaleido-config:${property("deps.kaleido_config")}")
+}
+
+tasks.named<Jar>("jar") {
+    finalizedBy("reobfJar")
 }
 
 tasks {
     processResources {
-        exclude("**/fabric.mod.json", "**/mods.toml")
+        exclude("**/fabric.mod.json", "**/neoforge.mods.toml")
     }
 
     named("createMinecraftArtifacts") {

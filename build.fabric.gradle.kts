@@ -55,11 +55,11 @@ tasks {
             "minecraft" to project.property("mod.mc_dep")
         )
 
-        filesMatching("fabric.mod.json") {
+        filesMatching(listOf("fabric.mod.json", "META-INF/neoforge.mods.toml", "META-INF/mods.toml", "pack.mcmeta")) {
             expand(props)
         }
 
-        exclude("**/neoforge.mods.toml")
+        exclude("**/*mods.toml")
     }
 
     // Builds the version into a shared folder in `build/libs/${mod version}/`
