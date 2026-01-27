@@ -12,7 +12,7 @@ public class MainConfig extends ReflectiveConfig {
     public static final MainConfig INSTANCE = MainConfig.createToml(Platform.INSTANCE.getConfigPath(), "qomc", "main", MainConfig.class);
 
     @Comment("If true, only a single \"/config\" command will be registered which covers all mod.")
-    @Comment("If false, a command with the name \"/<mod_id>Config\" will be registered")
+    @Comment("If false, a command with the name \"/<mod_id>_config\" will be registered")
     @ChangeWarning(folk.sisby.kaleido.lib.quiltconfig.api.metadata.ChangeWarning.Type.RequiresRestart)
     public final TrackedValue<Boolean> unifiedConfigCommand = value(false);
 
