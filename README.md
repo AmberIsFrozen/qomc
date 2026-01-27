@@ -4,58 +4,51 @@
 
 <img alt="preview" src="https://raw.githubusercontent.com/AmberIsFrozen/qomc/refs/heads/main/assets/thumb.png"/></br>
 <i>pull the lever, qomc!</i><br/>
-Auto-generated server-side config commands for Minecraft mods utilizing <a href="https://github.com/sisby-folk/kaleido-config">Kaleido Config</a> (JiJ-safe implementation of Quilt Config)!
 
 </center>
 
 ---
 
-## Some background
-A [number of mods](https://modrinth.com/collection/zZVgWFum) utilize a config library called **Kaleido Config**, which relieves the work from Mod Developers to implement config read/saving.
+**QoMC** automatically generates server-side config commands for Minecraft mods utilizing <a href="https://github.com/sisby-folk/kaleido-config">Kaleido Config</a> (JiJ-safe implementation of Quilt Config)
 
-By default they generate a `.toml` file in the game's config directory that user can edit. However often-times they aren't quite editable in-game.
+### THE POISON CHOSEN ESPECIALLY FOR KALEIDO. KALEIDO'S POISON.
+A [number of mods](https://modrinth.com/collection/zZVgWFum) utilize the config library **Kaleido Config**, which is convenient as it works on all loaders and minecraft versions.
 
-[McQoy](https://modrinth.com/mod/mcqoy) solves this by auto-generating a GUI config screen which you can edit in-game.  
-However this isn't suitable for dedicated minecraft server which doesn't have a GUI. This mod solves this by auto-generating a Minecraft command for config.
+Kaleido-based configurations generates `.toml` files in the game's config directory, but these can't be changed while the game is running.
 
-## Usage
-<details>
-    <summary>For players</summary>
+[McQoy](https://modrinth.com/mod/mcqoy) solves this by auto-generating client-side configuration GUIs which allow you to edit the configs in-game.  
+This is good for singleplayer and client-side mods, but unhelpful for servers. QoMC addresses this by generating server commands instead!
+
+### ...RIGHT.
 
 After installation, QoMC will detect mods making use of Kaleido on startup, and auto generate a command for them.
 
-By default, the command name would be `/<Mod ID>_config`, for example `/qomc_config`.
+By default, the command is `/<Mod ID>_config`, e.g. `/qomc_config`.
 
-For mods with multiple config, QoMC also allows you to specify different config, e.g. `/qomc_config demo` and `/qomc_config main`.
+For mods with multiple config files, QoMC will split the commands by config, e.g. `/qomc_config demo` and `/qomc_config main`.
 
-</details>
-<details>
-    <summary>For developers</summary>
+### IN MY DEFENSE, YOUR POISONS ALL LOOK ALIKE
 
-This is a mod which automatically generates a config command for players. Developers should not need to concern about depending on this mod.  
-All they need to do is to use [Kaleido Config](https://github.com/sisby-folk/kaleido-config) to handle their configs, and QoMC will automatically discover the config and generate the corresponding command.
-    
-### Disable auto-command generation
-If your mod already supply a first-party config command, it may be desirable to disable the auto-generated command from QoMC. This can be done by adding the corresponding field in the mod metadata.
+For devs, QoMC integration is implicit - just use [Kaleido Config](https://github.com/sisby-folk/kaleido-config) for configuration, and relevant commands will appear when QoMC is installed.<br/>
+QoMC is a purely optional runtime dependency, so don't on QoMC in your buildscripts or mod metadata - only on modrinth / curseforge.
 
-**Fabric Mod**
-- Add the following to your **fabric.mod.json**:
-- ```json
+If you've implemented your own config commands, you can disable discovery of your configs using a metadata key:
+
+In **fabric.mod.json**:
+```json
   "custom": {
     "qomc:hidden": true
   }
   ```
 
-**NeoForge Mod**
-- Add the following to your **neoforge.mods.toml**:
-- ```toml
+Or in **neoforge.mods.toml**:
+```toml
   [modproperties.qomc]
   hidden=true
   ```
 
-</details>
+### HOW ABOUT DESSERT?
 
-## Credits & Licenses
-This project is licensed under the LGPL 3.0.
+This project is licensed under the LGPL 3.0
 
-Many codes & ideas are inspired by [McQoy](https://github.com/sisby-folk/mcqoy), the GUI counterpart of QoMC!
+QoMC takes direct inspiration from [McQoy](https://github.com/sisby-folk/mcqoy), its client-side GUI counterpart!
