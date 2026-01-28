@@ -3,6 +3,7 @@ import org.gradle.kotlin.dsl.stonecutter
 plugins {
     id("net.neoforged.moddev.legacyforge")
     id("dev.kikugie.postprocess.jsonlang")
+    id("me.modmuss50.mod-publish-plugin")
 }
 
 tasks.named<ProcessResources>("processResources") {
@@ -74,6 +75,7 @@ tasks.named<Jar>("jar") {
 }
 
 tasks {
+
     processResources {
         exclude("**/fabric.mod.json", "**/neoforge.mods.toml")
     }
@@ -84,9 +86,44 @@ tasks {
 
     register<Copy>("buildAndCollect") {
         group = "build"
-        from(jar.map { it.archiveFile })
+        from((getByName("reobfJar") as net.neoforged.moddevgradle.legacyforge.tasks.RemapJar).archiveFile)
         into(rootProject.layout.buildDirectory.file("libs/${project.property("mod.version")}"))
-        dependsOn("build")
+        dependsOn("reobfJar")
+    }
+
+    publishMods {
+        file = (getByName("reobfJar") as net.neoforged.moddevgradle.legacyforge.tasks.RemapJar).archiveFile
+        modLoaders.add("forge")
+        if(sc.current.version == "1.20.1") {
+            modLoaders.add("neoforge")
+        }
+        type = STABLE
+        displayName = "[${property("mod.release_prefix")}] v${property("mod.version")}"
+        changelog = provider { rootProject.file("CHANGELOG.md").readText() }
+        dryRun = providers.environmentVariable("MODRINTH_API_KEY").getOrNull() == null
+        val mcDep = property("mod.mc_dep") as String
+        val startMcVersion = mcDep.split(" ")[0].replace("\\[|,|\\)".toRegex(), "")
+        val endMcVersion = if(mcDep.contains(" ")) mcDep.split(" ")[1].replace("\\[|,|\\)".toRegex(), "") else mcDep
+
+        modrinth {
+            accessToken = providers.environmentVariable("MODRINTH_API_KEY")
+            projectId = property("release.modrinth") as String
+
+            minecraftVersionRange {
+                start = startMcVersion
+                end = endMcVersion
+            }
+        }
+
+        curseforge {
+            accessToken = providers.environmentVariable("CURSEFORGE_API_KEY")
+            projectId = property("release.curseforge") as String
+
+            minecraftVersionRange {
+                start = startMcVersion
+                end = endMcVersion
+            }
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 plugins {
     id("net.fabricmc.fabric-loom-remap")
+    id("me.modmuss50.mod-publish-plugin")
 }
 
 version = "${property("mod.version")}+${sc.current.version}-fabric"
@@ -68,5 +69,39 @@ tasks {
         from(remapJar.map { it.archiveFile }, remapSourcesJar.map { it.archiveFile })
         into(rootProject.layout.buildDirectory.file("libs/${project.property("mod.version")}"))
         dependsOn("build")
+    }
+
+    publishMods {
+        file = remapJar.map { it.archiveFile.get() }
+        modLoaders.add("fabric")
+        type = STABLE
+        displayName = "[${property("mod.release_prefix")}] v${property("mod.version")}"
+        changelog = provider { rootProject.file("CHANGELOG.md").readText() }
+        dryRun = providers.environmentVariable("MODRINTH_API_KEY").getOrNull() == null
+        val mcDep = property("mod.mc_dep") as String
+        val startMcVersion = mcDep.split(" ")[0].replace("=|>|<".toRegex(), "")
+        val endMcVersion = if(mcDep.contains(" ")) mcDep.split(" ")[1].replace("=|>|<".toRegex(), "") else mcDep
+
+        modrinth {
+            accessToken = providers.environmentVariable("MODRINTH_API_KEY")
+            projectId = property("release.modrinth") as String
+            requires("fabric-api")
+
+            minecraftVersionRange {
+                start = startMcVersion
+                end = endMcVersion
+            }
+        }
+
+        curseforge {
+            accessToken = providers.environmentVariable("CURSEFORGE_API_KEY")
+            projectId = property("release.curseforge") as String
+            requires("fabric-api")
+
+            minecraftVersionRange {
+                start = startMcVersion
+                end = endMcVersion
+            }
+        }
     }
 }

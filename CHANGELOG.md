@@ -1,0 +1,2 @@
+- Add support for Forge 1.20.1
+- Fix NeoForge 1.21 crashing on dedicated server
