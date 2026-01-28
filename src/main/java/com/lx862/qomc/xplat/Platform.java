@@ -3,7 +3,7 @@ package com.lx862.qomc.xplat;
 //? fabric
 import com.lx862.qomc.xplat.fabric.FabricPlatform;
 //? neoforge
-/*import com.lx862.qomc.xplat.neoforge.NeoforgePlatform;*/
+//import com.lx862.qomc.xplat.neoforge.NeoforgePlatform;
 //? forge
 //import com.lx862.qomc.xplat.forge.ForgePlatform;
 
@@ -18,7 +18,7 @@ public interface Platform {
     //? fabric
     Platform INSTANCE = new FabricPlatform();
     //? neoforge
-    /*Platform INSTANCE = new NeoforgePlatform();*/
+    //Platform INSTANCE = new NeoforgePlatform();
     //? forge
     //Platform INSTANCE = new ForgePlatform();
 

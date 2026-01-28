@@ -1,13 +1,12 @@
 package com.lx862.qomc.xplat.neoforge;
 
 //? neoforge {
-/*import com.lx862.qomc.Qomc;
-import com.lx862.qomc.xplat.Platform;
+/*import com.lx862.qomc.xplat.Platform;
 import com.lx862.qomc.util.ModInfo;
 import com.mojang.brigadier.CommandDispatcher;
-import net.minecraft.client.Minecraft;
 import net.minecraft.commands.CommandSourceStack;
 import net.neoforged.fml.ModList;
+import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforgespi.language.IModInfo;
@@ -38,7 +37,7 @@ public class NeoforgePlatform implements Platform {
 
     @Override
     public Path getConfigPath() {
-        return Minecraft.getInstance().gameDirectory.toPath().resolve("config");
+        return FMLPaths.CONFIGDIR.get();
     }
 }
 *///? }
