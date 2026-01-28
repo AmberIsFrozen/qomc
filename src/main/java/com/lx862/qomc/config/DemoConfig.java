@@ -54,8 +54,8 @@ public class DemoConfig extends ReflectiveConfig {
         @Comment("A ValueList containing a list of string. The ValueList have a @Matches annotation of \"#[0-9A-Fa-f]{6}\", which will be picked up by QoMC as a RGB HEX color.")
         public final TrackedValue<ValueList<String>> colorListValue = list("", "#00FF00", "#FFFF00");
 
-        @Comment("A String-Enum list about various addon content type for Minecraft.")
-        public final TrackedValue<ValueMap<ContentType>> enumListValue = map(ContentType.MOD).put("QoMC", ContentType.MOD).put("Programmer Art", ContentType.RESOURCE_PACK).put("BSL Shaders", ContentType.SHADERS).put("Blahaj", ContentType.PLUSH).build();
+        @Comment("A String-Enum map about various addon content type for Minecraft.")
+        public final TrackedValue<ValueMap<ContentType>> enumMapValue = map(ContentType.MOD).put("QoMC", ContentType.MOD).put("Programmer Art", ContentType.RESOURCE_PACK).put("BSL Shaders", ContentType.SHADERS).put("Blahaj", ContentType.PLUSH).build();
     }
 
     public static final class Special extends Section {
