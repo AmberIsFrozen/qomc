@@ -18,7 +18,7 @@ plugins {
 stonecutter {
     create(rootProject) {
         var combos = listOf("1.16.5-fabric", "1.18.2-fabric", "1.19.4-fabric", "1.20.1-forge", "1.21.1-fabric", "1.21.5-fabric", "1.21.11-fabric",
-            "1.21.1-neoforge")
+            "1.21.1-neoforge", "26.1-fabric")
 
         combos.forEach {
             val ver = it.split("-")[0]

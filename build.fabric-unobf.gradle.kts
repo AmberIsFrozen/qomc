@@ -1,17 +1,12 @@
 plugins {
-    id("net.fabricmc.fabric-loom-remap")
+    id("net.fabricmc.fabric-loom")
     id("me.modmuss50.mod-publish-plugin")
 }
 
 version = "${property("mod.version")}+${sc.current.version}-fabric"
 base.archivesName = property("mod.id") as String
 
-val requiredJava = when {
-    sc.current.parsed >= "1.20.6" -> JavaVersion.VERSION_21
-    sc.current.parsed >= "1.19" -> JavaVersion.VERSION_17
-    sc.current.parsed >= "1.17" -> JavaVersion.VERSION_16
-    else -> JavaVersion.VERSION_1_8
-}
+val requiredJava = JavaVersion.VERSION_25
 
 repositories {
     maven("https://repo.sleeping.town/")
@@ -19,9 +14,8 @@ repositories {
 
 dependencies {
     minecraft("com.mojang:minecraft:${sc.current.version}")
-    mappings(loom.officialMojangMappings())
-    modImplementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
-    modImplementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
+    implementation("net.fabricmc:fabric-loader:${property("deps.fabric_loader")}")
+    implementation("net.fabricmc.fabric-api:fabric-api:${property("deps.fabric_api")}")
 
     implementation("folk.sisby:kaleido-config:${property("deps.kaleido_config")}")
     include("folk.sisby:kaleido-config:${property("deps.kaleido_config")}")
@@ -54,7 +48,7 @@ tasks {
             "name" to project.property("mod.name"),
             "version" to project.property("mod.version"),
             "minecraft" to project.property("mod.mc_dep"),
-            "fapi_slug" to "fabric"
+            "fapi_slug" to "fabric-api"
         )
 
         filesMatching(listOf("fabric.mod.json", "META-INF/neoforge.mods.toml", "META-INF/mods.toml", "pack.mcmeta")) {
@@ -67,13 +61,13 @@ tasks {
     // Builds the version into a shared folder in `build/libs/${mod version}/`
     register<Copy>("buildAndCollect") {
         group = "build"
-        from(remapJar.map { it.archiveFile }, remapSourcesJar.map { it.archiveFile })
+        from(jar.map { it.archiveFile })
         into(rootProject.layout.buildDirectory.file("libs/${project.property("mod.version")}"))
         dependsOn("build")
     }
 
     publishMods {
-        file = remapJar.map { it.archiveFile.get() }
+        file = jar.map { it.archiveFile.get() }
         modLoaders.add("fabric")
         type = STABLE
         displayName = "[${property("mod.release_prefix")}] v${property("mod.version")}"
