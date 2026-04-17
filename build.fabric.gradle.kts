@@ -7,7 +7,7 @@ version = "${property("mod.version")}+${sc.current.version}-fabric"
 base.archivesName = property("mod.id") as String
 
 val requiredJava = when {
-    sc.current.parsed >= "1.20.6" -> JavaVersion.VERSION_21
+    sc.current.parsed >= "1.21.2" -> JavaVersion.VERSION_21
     sc.current.parsed >= "1.19" -> JavaVersion.VERSION_17
     sc.current.parsed >= "1.17" -> JavaVersion.VERSION_16
     else -> JavaVersion.VERSION_1_8
