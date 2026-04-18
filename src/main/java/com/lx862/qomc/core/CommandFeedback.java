@@ -1,7 +1,7 @@
 package com.lx862.qomc.core;
 
+import com.lx862.qomc.command.AbstractCommandSource;
 import com.lx862.qomc.util.VersionUtil;
-import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.network.chat.MutableComponent;
 
 import java.util.ArrayList;
@@ -24,9 +24,9 @@ public class CommandFeedback {
         add(VersionUtil.emptyText());
     }
 
-    public void send(CommandSourceStack commandSourceStack, boolean broadcastToOp) {
+    public void send(AbstractCommandSource commandSourceStack, boolean broadcastToOp) {
         for(MutableComponent component : components) {
-            VersionUtil.sendFeedback(commandSourceStack, () -> component, broadcastToOp);
+            commandSourceStack.sendFeedback(component, broadcastToOp);
         }
     }
 }

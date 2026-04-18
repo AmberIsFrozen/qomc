@@ -1,5 +1,7 @@
 package com.lx862.qomc;
 
+import com.lx862.qomc.command.AbstractCommandManager;
+import com.lx862.qomc.command.AbstractCommandSource;
 import com.lx862.qomc.core.CommandFeedback;
 import com.lx862.qomc.core.ConfigTree;
 import com.lx862.qomc.core.ConfigSectionTree;
@@ -17,8 +19,6 @@ import folk.sisby.kaleido.lib.quiltconfig.api.Constraint;
 import folk.sisby.kaleido.lib.quiltconfig.api.annotations.ChangeWarning;
 import folk.sisby.kaleido.lib.quiltconfig.api.values.*;
 import net.minecraft.ChatFormatting;
-import net.minecraft.commands.CommandSourceStack;
-import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Style;
 import java.util.*;
@@ -27,20 +27,21 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import static com.lx862.qomc.util.VersionUtil.literalText;
 
 public class ConfigCommands {
-    public static LiteralArgumentBuilder<CommandSourceStack> buildModNode(ModInfo modInfo, String commandLiteral, List<Config> configs) {
-        LiteralArgumentBuilder<CommandSourceStack> rootNode = VersionUtil.requireMaxPermissionLevel(Commands.literal(commandLiteral));
+    public static <S> LiteralArgumentBuilder<S> buildModNode(AbstractCommandManager<S> commandManager, ModInfo modInfo, String commandLiteral, List<Config> configs) {
+        LiteralArgumentBuilder<S> rootNode = commandManager.requirePermission(commandManager.literal(commandLiteral));
 
         for(Config config : configs) {
             ConfigTree configTree = ConfigTree.of(config);
+
             if(configs.size() == 1) { // Mod with single config
-                rootNode.executes(ctx -> printConfig(ctx, config, configTree, modInfo));
-                for(LiteralArgumentBuilder<CommandSourceStack> valueNode : buildConfigNodes(config, configTree)) {
+                rootNode.executes(ctx -> printConfig(ctx, commandManager.getCommandSource(ctx), config, configTree, modInfo));
+                for(LiteralArgumentBuilder<S> valueNode : buildConfigNodes(commandManager, config, configTree)) {
                     rootNode.then(valueNode);
                 }
             } else {
-                LiteralArgumentBuilder<CommandSourceStack> configNode = Commands.literal(config.id());
-                configNode.executes(ctx -> printConfig(ctx, config, configTree, modInfo));
-                for(LiteralArgumentBuilder<CommandSourceStack> valueNodes : buildConfigNodes(config, configTree)) {
+                LiteralArgumentBuilder<S> configNode = commandManager.literal(config.id());
+                configNode.executes(ctx -> printConfig(ctx, commandManager.getCommandSource(ctx), config, configTree, modInfo));
+                for(LiteralArgumentBuilder<S> valueNodes : buildConfigNodes(commandManager, config, configTree)) {
                     configNode.then(valueNodes);
                 }
                 rootNode.then(configNode);
@@ -50,71 +51,71 @@ public class ConfigCommands {
         return rootNode;
     }
 
-    public static List<LiteralArgumentBuilder<CommandSourceStack>> buildConfigNodes(Config config, ConfigTree configTree) {
-        List<LiteralArgumentBuilder<CommandSourceStack>> nodes = new ArrayList<>();
+    public static <S> List<LiteralArgumentBuilder<S>> buildConfigNodes(AbstractCommandManager<S> commandManager, Config config, ConfigTree configTree) {
+        List<LiteralArgumentBuilder<S>> nodes = new ArrayList<>();
         for(TrackedValue<?> field : configTree.rootSection().fields()) {
-            nodes.add(buildFieldNode(config, field));
+            nodes.add(buildFieldNode(commandManager, config, field));
         }
 
         for(Map.Entry<ValueKey, ConfigSectionTree> section : configTree.rootSection().sections().entrySet()) {
-            LiteralArgumentBuilder<CommandSourceStack> sectionNode = buildSectionNode(config, section.getValue());
+            LiteralArgumentBuilder<S> sectionNode = buildSectionNode(commandManager, config, section.getValue());
             nodes.add(sectionNode);
         }
         return nodes;
     }
 
-    private static LiteralArgumentBuilder<CommandSourceStack> buildSectionNode(Config config, ConfigSectionTree sectionTree) {
-        LiteralArgumentBuilder<CommandSourceStack> sectionNode = Commands.literal("[" + QconfUtil.getSerializedName(sectionTree.node()) + "]")
-        .executes(ctx -> printSection(ctx, config, sectionTree.node(), sectionTree));
+    private static <S> LiteralArgumentBuilder<S> buildSectionNode(AbstractCommandManager<S> commandManager, Config config, ConfigSectionTree sectionTree) {
+        LiteralArgumentBuilder<S> sectionNode = commandManager.literal("[" + QconfUtil.getSerializedName(sectionTree.node()) + "]")
+        .executes(ctx -> printSection(ctx, commandManager.getCommandSource(ctx), config, sectionTree.node(), sectionTree));
 
-        sectionTree.fields().forEach(field -> sectionNode.then(buildFieldNode(config, field)));
-        sectionTree.sections().values().forEach((subSection) -> sectionNode.then(buildSectionNode(config, subSection)));
+        sectionTree.fields().forEach(field -> sectionNode.then(buildFieldNode(commandManager, config, field)));
+        sectionTree.sections().values().forEach((subSection) -> sectionNode.then(buildSectionNode(commandManager, config, subSection)));
 
         return sectionNode;
     }
 
-    private static <T> LiteralArgumentBuilder<CommandSourceStack> buildFieldNode(Config config, TrackedValue<T> trackedValue) {
+    private static <T, S> LiteralArgumentBuilder<S> buildFieldNode(AbstractCommandManager<S> commandManager, Config config, TrackedValue<T> trackedValue) {
         ValueType valueType = ValueType.getType(trackedValue, trackedValue.getDefaultValue());
 
-        LiteralArgumentBuilder<CommandSourceStack> fieldNode = Commands.literal(QconfUtil.getSerializedName(trackedValue))
-        .executes(ctx -> printField(ctx, config, trackedValue, valueType));
+        LiteralArgumentBuilder<S> fieldNode = commandManager.literal(QconfUtil.getSerializedName(trackedValue))
+        .executes(ctx -> printField(ctx, commandManager.getCommandSource(ctx), config, trackedValue, valueType));
 
-        List<ArgumentBuilder<CommandSourceStack, ?>> setValueNodes = buildSetValueNodes(trackedValue, valueType, (ctx, newValue) -> {
+        List<ArgumentBuilder<S, ?>> setValueNodes = buildSetValueNodes(commandManager, trackedValue, valueType, (ctx, commandSource, newValue) -> {
             if(valueType == ValueType.BOOLEAN || valueType == ValueType.STRING || valueType == ValueType.INTEGER || valueType == ValueType.LONG || valueType == ValueType.FLOAT || valueType == ValueType.DOUBLE) {
-                return configSetValue(ctx, trackedValue, valueType, newValue);
+                return configSetValue(commandSource, trackedValue, valueType, newValue);
             }
             if(valueType == ValueType.COLOR_RGB) {
-                return configSetColorHex(ctx, (TrackedValue<String>) trackedValue, (String)newValue, false);
+                return configSetColorHex(commandSource, (TrackedValue<String>) trackedValue, (String)newValue, false);
             }
             if(valueType == ValueType.COLOR_ARGB) {
-                return configSetColorHex(ctx, (TrackedValue<String>) trackedValue, (String)newValue, true);
+                return configSetColorHex(commandSource, (TrackedValue<String>) trackedValue, (String)newValue, true);
             }
             if(valueType == ValueType.ENUM) {
-                return configSetEnum(ctx, (TrackedValue<Enum<?>>) trackedValue, (Enum<?>)newValue);
+                return configSetEnum(commandSource, (TrackedValue<Enum<?>>) trackedValue, (Enum<?>)newValue);
             }
             return 0;
         });
 
-        for(ArgumentBuilder<CommandSourceStack, ?> valueNode : setValueNodes) {
+        for(ArgumentBuilder<S, ?> valueNode : setValueNodes) {
             fieldNode.then(valueNode);
         }
 
         // Node to reset to default value
         fieldNode.then(
-            Commands.literal("{default}")
-                .executes(ctx -> configSetValue(ctx, trackedValue, valueType, trackedValue.getDefaultValue()))
+            commandManager.literal("{default}")
+                .executes(ctx -> configSetValue(commandManager.getCommandSource(ctx), trackedValue, valueType, trackedValue.getDefaultValue()))
         );
 
         return fieldNode;
     }
 
     @FunctionalInterface
-    private interface ValueSetCallback<T> {
-        int onSet(CommandContext<CommandSourceStack> ctx, T value);
+    protected interface ValueSetCallback<T, S> {
+        int onSet(CommandContext<S> ctx, AbstractCommandSource commandSource, T value);
     }
 
-    public static <T> List<ArgumentBuilder<CommandSourceStack, ?>> buildSetValueNodes(TrackedValue<T> trackedValue, ValueType valueType, ValueSetCallback<T> valueSetCallback) {
-        List<ArgumentBuilder<CommandSourceStack, ?>> nodes = new ArrayList<>();
+    public static <T, S> List<ArgumentBuilder<S, ?>> buildSetValueNodes(AbstractCommandManager<S> commandManager, TrackedValue<T> trackedValue, ValueType valueType, ValueSetCallback<T, S> valueSetCallback) {
+        List<ArgumentBuilder<S, ?>> nodes = new ArrayList<>();
 
         // Probe for range constraint
         Constraint.Range<?> rangeConstraint = null;
@@ -123,47 +124,47 @@ public class ConfigCommands {
         }
 
         if(valueType == ValueType.BOOLEAN) {
-            nodes.add(Commands.argument("boolean", BoolArgumentType.bool())
-                    .executes(ctx -> valueSetCallback.onSet(ctx, (T)(Boolean)BoolArgumentType.getBool(ctx, "boolean")))
+            nodes.add(commandManager.argument("boolean", BoolArgumentType.bool())
+                    .executes(ctx -> valueSetCallback.onSet(ctx, commandManager.getCommandSource(ctx), (T)(Boolean)BoolArgumentType.getBool(ctx, "boolean")))
             );
         }
         if(valueType == ValueType.STRING) {
-            nodes.add(Commands.argument("string", StringArgumentType.string())
-                    .executes(ctx -> valueSetCallback.onSet(ctx, (T)StringArgumentType.getString(ctx, "string")))
+            nodes.add(commandManager.argument("string", StringArgumentType.string())
+                    .executes(ctx -> valueSetCallback.onSet(ctx, commandManager.getCommandSource(ctx), (T)StringArgumentType.getString(ctx, "string")))
             );
         }
         if(valueType == ValueType.COLOR_RGB) {
-            nodes.add(Commands.argument("rgbColor", StringArgumentType.string())
-                .executes(ctx -> valueSetCallback.onSet(ctx, (T)StringArgumentType.getString(ctx, "rgbColor")))
+            nodes.add(commandManager.argument("rgbColor", StringArgumentType.string())
+                .executes(ctx -> valueSetCallback.onSet(ctx, commandManager.getCommandSource(ctx), (T)StringArgumentType.getString(ctx, "rgbColor")))
             );
         }
         if(valueType == ValueType.COLOR_ARGB) {
-            nodes.add(Commands.argument("argbColor", StringArgumentType.string())
-                .executes(ctx -> valueSetCallback.onSet(ctx, (T)StringArgumentType.getString(ctx, "argbColor")))
+            nodes.add(commandManager.argument("argbColor", StringArgumentType.string())
+                .executes(ctx -> valueSetCallback.onSet(ctx, commandManager.getCommandSource(ctx), (T)StringArgumentType.getString(ctx, "argbColor")))
             );
         }
         if(valueType == ValueType.INTEGER) {
             IntegerArgumentType integerArgumentType = rangeConstraint == null ? IntegerArgumentType.integer() : IntegerArgumentType.integer((Integer) rangeConstraint.min(), (Integer) rangeConstraint.max());
-            nodes.add(Commands.argument("number", integerArgumentType)
-                    .executes(ctx -> valueSetCallback.onSet(ctx, (T)(Integer)IntegerArgumentType.getInteger(ctx, "number")))
+            nodes.add(commandManager.argument("number", integerArgumentType)
+                    .executes(ctx -> valueSetCallback.onSet(ctx, commandManager.getCommandSource(ctx), (T)(Integer)IntegerArgumentType.getInteger(ctx, "number")))
             );
         }
         if(valueType == ValueType.LONG) {
             LongArgumentType longArgumentType = rangeConstraint == null ? LongArgumentType.longArg() : LongArgumentType.longArg((Long) rangeConstraint.min(), (Long) rangeConstraint.max());
-            nodes.add(Commands.argument("number", longArgumentType)
-                    .executes(ctx -> valueSetCallback.onSet(ctx, (T)(Long)LongArgumentType.getLong(ctx, "number")))
+            nodes.add(commandManager.argument("number", longArgumentType)
+                    .executes(ctx -> valueSetCallback.onSet(ctx, commandManager.getCommandSource(ctx), (T)(Long)LongArgumentType.getLong(ctx, "number")))
             );
         }
         if(valueType == ValueType.FLOAT) {
             FloatArgumentType floatArgumentType = rangeConstraint == null ? FloatArgumentType.floatArg() : FloatArgumentType.floatArg((Float) rangeConstraint.min(), (Float) rangeConstraint.max());
-            nodes.add(Commands.argument("number", floatArgumentType)
-                    .executes(ctx -> valueSetCallback.onSet(ctx, (T)(Float)FloatArgumentType.getFloat(ctx, "number")))
+            nodes.add(commandManager.argument("number", floatArgumentType)
+                    .executes(ctx -> valueSetCallback.onSet(ctx, commandManager.getCommandSource(ctx), (T)(Float)FloatArgumentType.getFloat(ctx, "number")))
             );
         }
         if(valueType == ValueType.DOUBLE) {
             DoubleArgumentType doubleArgumentType = rangeConstraint == null ? DoubleArgumentType.doubleArg() : DoubleArgumentType.doubleArg((Double) rangeConstraint.min(), (Double) rangeConstraint.max());
-            nodes.add(Commands.argument("number", doubleArgumentType)
-                    .executes(ctx -> valueSetCallback.onSet(ctx, (T)(Double)DoubleArgumentType.getDouble(ctx, "number")))
+            nodes.add(commandManager.argument("number", doubleArgumentType)
+                    .executes(ctx -> valueSetCallback.onSet(ctx, commandManager.getCommandSource(ctx), (T)(Double)DoubleArgumentType.getDouble(ctx, "number")))
             );
         }
         if(valueType == ValueType.ENUM) {
@@ -180,8 +181,8 @@ public class ConfigCommands {
             for(Enum<?> enumValue : enumValues) {
                 String enumName = enumValue.name();
                 nodes.add(
-                    Commands.literal(enumName)
-                            .executes(ctx -> valueSetCallback.onSet(ctx, (T)enumValue))
+                    commandManager.literal(enumName)
+                        .executes(ctx -> valueSetCallback.onSet(ctx, commandManager.getCommandSource(ctx), (T)enumValue))
                 );
             }
         }
@@ -190,13 +191,13 @@ public class ConfigCommands {
             TrackedValue<ValueList<Object>> list = (TrackedValue<ValueList<Object>>)trackedValue;
             ValueType childType = ValueType.getType(trackedValue, list.value().getDefaultValue());
 
-            LiteralArgumentBuilder<CommandSourceStack> addNode = Commands.literal("add");
-            for(ArgumentBuilder<CommandSourceStack, ?> addValueNode : buildSetValueNodes(trackedValue, childType, (ctx, newValue) -> configAddList(ctx, list, newValue, childType))) {
+            LiteralArgumentBuilder<S> addNode = commandManager.literal("add");
+            for(ArgumentBuilder<S, ?> addValueNode : buildSetValueNodes(commandManager, trackedValue, childType, (ctx, commandSource, newValue) -> configAddList(commandSource, list, newValue, childType))) {
                 addNode.then(addValueNode);
             }
 
-            LiteralArgumentBuilder<CommandSourceStack> removeNode = Commands.literal("remove");
-            for(ArgumentBuilder<CommandSourceStack, ?> removeValueNode : buildSetValueNodes(trackedValue, childType, (ctx, newValue) -> configRemoveList(ctx, list, newValue, childType))) {
+            LiteralArgumentBuilder<S> removeNode = commandManager.literal("remove");
+            for(ArgumentBuilder<S, ?> removeValueNode : buildSetValueNodes(commandManager, trackedValue, childType, (ctx, commandSource, newValue) -> configRemoveList(commandSource, list, newValue, childType))) {
                 if(removeValueNode instanceof RequiredArgumentBuilder<?, ?>) {
                     RequiredArgumentBuilder<?, ?> requiredArgumentBuilder = (RequiredArgumentBuilder<?, ?>)removeValueNode;
                     requiredArgumentBuilder.suggests((commandContext, suggestionsBuilder) -> {
@@ -218,24 +219,24 @@ public class ConfigCommands {
             TrackedValue<ValueMap<Object>> map = (TrackedValue<ValueMap<Object>>)trackedValue;
             ValueType childType = ValueType.getType(map, map.value().getDefaultValue());
 
-            RequiredArgumentBuilder<CommandSourceStack, ?> setKeyNode = Commands.argument("key", StringArgumentType.string())
+            RequiredArgumentBuilder<S, ?> setKeyNode = commandManager.argument("key", StringArgumentType.string())
             .suggests((commandContext, suggestionsBuilder) -> {
                 map.value().keySet().forEach(key -> suggestionsBuilder.suggest(StringArgumentType.escapeIfRequired(key)));
                 return suggestionsBuilder.buildFuture();
             });
-            for(ArgumentBuilder<CommandSourceStack, ?> mapNode : buildSetValueNodes(trackedValue, childType, (ctx, newValue) -> configSetMap(ctx, map, StringArgumentType.getString(ctx, "key"), newValue, childType))) {
+            for(ArgumentBuilder<S, ?> mapNode : buildSetValueNodes(commandManager, trackedValue, childType, (ctx, commandSource, newValue) -> configSetMap(commandSource, map, StringArgumentType.getString(ctx, "key"), newValue, childType))) {
                 setKeyNode.then(mapNode);
             }
 
-            RequiredArgumentBuilder<CommandSourceStack, ?> removeKeyNode = Commands.argument("key", StringArgumentType.string())
+            RequiredArgumentBuilder<S, ?> removeKeyNode = commandManager.argument("key", StringArgumentType.string())
                 .suggests((commandContext, suggestionsBuilder) -> {
                     map.value().keySet().forEach(key -> suggestionsBuilder.suggest(StringArgumentType.escapeIfRequired(key)));
                     return suggestionsBuilder.buildFuture();
                 })
-                .executes(ctx -> configRemoveMap(ctx, map, StringArgumentType.getString(ctx, "key"), childType));
+                .executes(ctx -> configRemoveMap(commandManager.getCommandSource(ctx), map, StringArgumentType.getString(ctx, "key"), childType));
 
-            LiteralArgumentBuilder<CommandSourceStack> setNode = Commands.literal("set").then(setKeyNode);
-            LiteralArgumentBuilder<CommandSourceStack> removeNode = Commands.literal("remove").then(removeKeyNode);
+            LiteralArgumentBuilder<S> setNode = commandManager.literal("set").then(setKeyNode);
+            LiteralArgumentBuilder<S> removeNode = commandManager.literal("remove").then(removeKeyNode);
             nodes.add(setNode);
             nodes.add(removeNode);
         }
@@ -243,7 +244,7 @@ public class ConfigCommands {
         return nodes;
     }
 
-    private static int printConfig(CommandContext<CommandSourceStack> ctx, Config config, ConfigTree configTree, ModInfo modInfo) {
+    private static int printConfig(CommandContext<?> ctx, AbstractCommandSource commandSource, Config config, ConfigTree configTree, ModInfo modInfo) {
         CommandFeedback feedback = new CommandFeedback();
 
         feedback.addEmptyLine();
@@ -257,11 +258,11 @@ public class ConfigCommands {
 
         printConfigInternal(ctx, feedback, config, configTree.rootSection(), -1);
         feedback.addEmptyLine();
-        feedback.send(ctx.getSource(), false);
+        feedback.send(commandSource, false);
         return 1;
     }
 
-    private static void printConfigInternal(CommandContext<CommandSourceStack> ctx, CommandFeedback feedback, Config config, ConfigSectionTree sectionTree, int nestedLevel) {
+    private static void printConfigInternal(CommandContext<?> ctx, CommandFeedback feedback, Config config, ConfigSectionTree sectionTree, int nestedLevel) {
         String indentStr = "";
         for(int i = 0; i < nestedLevel; i++) {
             indentStr += "  ";
@@ -301,7 +302,7 @@ public class ConfigCommands {
         }
     }
 
-    private static int printField(CommandContext<CommandSourceStack> ctx, Config config, TrackedValue<?> trackedValue, ValueType valueType) {
+    private static int printField(CommandContext<?> ctx, AbstractCommandSource commandSource, Config config, TrackedValue<?> trackedValue, ValueType valueType) {
         CommandFeedback feedback = new CommandFeedback();
         feedback.add(ComponentUtil.configNodeBreadcrumb(config, trackedValue));
         feedback.add(ComponentUtil.configNodeComments(trackedValue));
@@ -333,11 +334,11 @@ public class ConfigCommands {
         feedback.add(changeText);
         feedback.addEmptyLine();
 
-        feedback.send(ctx.getSource(), false);
+        feedback.send(commandSource, false);
         return 1;
     }
 
-    private static int printSection(CommandContext<CommandSourceStack> ctx, Config config, ValueTreeNode configSection, ConfigSectionTree sectionTree) {
+    private static int printSection(CommandContext<?> ctx, AbstractCommandSource commandSource, Config config, ValueTreeNode configSection, ConfigSectionTree sectionTree) {
         CommandFeedback feedback = new CommandFeedback();
 
         feedback.add(ComponentUtil.configNodeBreadcrumb(config, configSection));
@@ -364,51 +365,52 @@ public class ConfigCommands {
 
         feedback.addEmptyLine();
 
-        feedback.send(ctx.getSource(), false);
+        feedback.send(commandSource, false);
         return 1;
     }
 
-    private static <T> int configSetValue(CommandContext<CommandSourceStack> ctx, TrackedValue<T> trackedValue, ValueType valueType, T newValue) {
+    private static <T> int configSetValue(AbstractCommandSource commandSource, TrackedValue<T> trackedValue, ValueType valueType, T newValue) {
         try {
             setValue(trackedValue, newValue);
-            VersionUtil.sendFeedback(ctx.getSource(), () -> ComponentUtil.configFeedback(trackedValue, valueType), false);
+            commandSource.sendFeedback(ComponentUtil.configFeedback(trackedValue, valueType), false);
             return 1;
         } catch (ConfigFailException exception) {
-            VersionUtil.sendFailure(ctx.getSource(), exception.component());
+            commandSource.sendFeedback(exception.component(), false);
             return 0;
         }
     }
 
-    private static int configSetColorHex(CommandContext<CommandSourceStack> ctx, TrackedValue<String> trackedValue, String input, boolean isARGB) {
+    private static int configSetColorHex(AbstractCommandSource commandSource, TrackedValue<String> trackedValue, String input, boolean isARGB) {
         try {
-            return configSetValue(ctx, trackedValue, isARGB ? ValueType.COLOR_ARGB : ValueType.COLOR_RGB, ColorUtil.colorToHex(ColorUtil.toArgbColor(input, isARGB), isARGB));
+            return configSetValue(commandSource, trackedValue, isARGB ? ValueType.COLOR_ARGB : ValueType.COLOR_RGB, ColorUtil.colorToHex(ColorUtil.toArgbColor(input, isARGB), isARGB));
         } catch (NumberFormatException e) {
-            VersionUtil.sendFailure(ctx.getSource(), literalText("Invalid RGB Hex color format: " + input).withStyle(ChatFormatting.RED));
+            commandSource.sendFailure(literalText("Invalid RGB Hex color format: " + input).withStyle(ChatFormatting.RED));
             return 0;
         }
     }
 
-    private static int configSetEnum(CommandContext<CommandSourceStack> ctx, TrackedValue<Enum<?>> value, Enum<?> enumName) {
-        return configSetValue(ctx, value, ValueType.ENUM, enumName);
+    private static int configSetEnum(AbstractCommandSource commandSource, TrackedValue<Enum<?>> value, Enum<?> enumName) {
+        return configSetValue(commandSource, value, ValueType.ENUM, enumName);
     }
 
-    private static <T> int configAddList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item, ValueType childType) {
+    private static <T> int configAddList(AbstractCommandSource commandSource, TrackedValue<ValueList<T>> value, T item, ValueType childType) {
         ValueList<T> newList = (ValueList<T>) value.value().copy();
         newList.add(item);
         try {
             setValue(value, newList);
-            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("Inserted ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(literalText(" to list!")), false);
-            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.LIST)), false);
+
+            commandSource.sendFeedback(literalText("Inserted ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(literalText(" to list!")), false);
+            commandSource.sendFeedback(literalText("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.LIST)), false);
             return 1;
         } catch (ConfigFailException exception) {
-            VersionUtil.sendFailure(ctx.getSource(), exception.component());
+            commandSource.sendFailure(exception.component());
             return 0;
         }
     }
 
-    private static <T> int configRemoveList(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueList<T>> value, T item, ValueType childType) {
+    private static <T> int configRemoveList(AbstractCommandSource commandSource, TrackedValue<ValueList<T>> value, T item, ValueType childType) {
         if(!value.value().contains(item)) {
-            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("Value \"" + item + "\" is not in list " + QconfUtil.getDisplayName(value)).withStyle(ChatFormatting.RED), false);
+            commandSource.sendFeedback(literalText("Value \"" + item + "\" is not in list " + QconfUtil.getDisplayName(value)).withStyle(ChatFormatting.RED), false);
             return 0;
         }
         ValueList<T> newList = (ValueList<T>) value.value().copy();
@@ -417,34 +419,34 @@ public class ConfigCommands {
         try {
             setValue(value, newList);
 
-            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("Removed ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(literalText(" from list!")), false);
-            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.LIST)), false);
+            commandSource.sendFeedback(literalText("Removed ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(literalText(" from list!")), false);
+            commandSource.sendFeedback(literalText("New list: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.LIST)), false);
             return 1;
         } catch (ConfigFailException exception) {
-            VersionUtil.sendFailure(ctx.getSource(), exception.component());
+            commandSource.sendFailure(exception.component());
             return 0;
         }
     }
 
-    private static <T> int configSetMap(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueMap<T>> value, String key, T item, ValueType childType) {
+    private static <T> int configSetMap(AbstractCommandSource commandSource, TrackedValue<ValueMap<T>> value, String key, T item, ValueType childType) {
         ValueMap<T> newMap = (ValueMap<T>) value.value().copy();
         newMap.put(key, item);
 
         try {
             setValue(value, newMap);
 
-            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("\"" + key + "\" set to ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(" in map!"), false);
-            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.MAP)), false);
+            commandSource.sendFeedback(literalText("\"" + key + "\" set to ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, item, childType)).append(" in map!"), false);
+            commandSource.sendFeedback(literalText("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.MAP)), false);
             return 1;
         } catch (ConfigFailException exception) {
-            VersionUtil.sendFeedback(ctx.getSource(), exception::component, false);
+            commandSource.sendFailure(exception.component());
             return 0;
         }
     }
 
-    private static <T> int configRemoveMap(CommandContext<CommandSourceStack> ctx, TrackedValue<ValueMap<T>> value, String key, ValueType childType) {
+    private static <T> int configRemoveMap(AbstractCommandSource commandSource, TrackedValue<ValueMap<T>> value, String key, ValueType childType) {
         if(!value.value().containsKey(key)) {
-            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("Value \"" + key + "\" is not in the map!").withStyle(ChatFormatting.RED), false);
+            commandSource.sendFeedback(literalText("Value \"" + key + "\" is not in the map!").withStyle(ChatFormatting.RED), false);
             return 0;
         }
         ValueMap<T> newMap = (ValueMap<T>)value.value().copy();
@@ -453,11 +455,11 @@ public class ConfigCommands {
         try {
             setValue(value, newMap);
 
-            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("Removed \"" + key + "\" with value ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, removedValue, childType)).append(" from map!"), false);
-            VersionUtil.sendFeedback(ctx.getSource(), () -> literalText("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.MAP)), false);
+            commandSource.sendFeedback(literalText("Removed \"" + key + "\" with value ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, removedValue, childType)).append(" from map!"), false);
+            commandSource.sendFeedback(literalText("New map: ").withStyle(ChatFormatting.GREEN).append(ComponentUtil.formatValue(value, value.getRealValue(), ValueType.MAP)), false);
             return 1;
         } catch (ConfigFailException exception) {
-            VersionUtil.sendFeedback(ctx.getSource(), exception::component, false);
+            commandSource.sendFailure(exception.component());
             return 0;
         }
     }
@@ -481,9 +483,9 @@ public class ConfigCommands {
         trackedValue.setValue(newValue);
     }
 
-    private static String commandToString(CommandContext<CommandSourceStack> ctx) {
+    private static String commandToString(CommandContext<?> ctx) {
         String suggestedCommand = "/";
-        for(ParsedCommandNode<CommandSourceStack> node : ctx.getNodes()) {
+        for(ParsedCommandNode<?> node : ctx.getNodes()) {
             suggestedCommand += node.getNode().getName() + " ";
         }
         return suggestedCommand;

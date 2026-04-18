@@ -36,6 +36,13 @@ java {
     sourceCompatibility = requiredJava
 }
 
+stonecutter {
+    replacements.string(current.parsed >= "26.1") {
+        // FAPI Rename
+        replace("ClientCommandManager", "ClientCommands")
+    }
+}
+
 tasks {
     processResources {
         inputs.property("id", project.property("mod.id"))

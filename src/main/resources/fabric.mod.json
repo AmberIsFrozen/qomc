@@ -19,6 +19,7 @@
           "com.lx862.qomc.xplat.fabric.QomcFabric"
 		],
 		"client": [
+			"com.lx862.qomc.xplat.fabric.client.QomcFabricClient"
 		]
 	},
 	"mixins": [
