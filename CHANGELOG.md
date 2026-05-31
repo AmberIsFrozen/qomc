@@ -1,3 +1,3 @@
-- Fix Fabric 1.20.1 enforcing an incorrect Java version
+- Fix Fabric 1.20.1 - 1.20.5 crashing due to targetting an incorrect Java version
 - Added support for **client** config. Any config with "client" as their name will get registered in the client-side only. Allowing for usage across multiplayer servers.
   - The client commands are registered with the `_client` suffix to prevent collision with the main command.

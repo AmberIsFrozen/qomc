@@ -99,6 +99,8 @@ tasks {
             accessToken = providers.environmentVariable("CURSEFORGE_API_KEY")
             projectId = property("release.curseforge") as String
             requires("fabric-api")
+            client = true
+            server = true
 
             minecraftVersionRange {
                 start = startMcVersion

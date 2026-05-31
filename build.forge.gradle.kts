@@ -118,6 +118,8 @@ tasks {
         curseforge {
             accessToken = providers.environmentVariable("CURSEFORGE_API_KEY")
             projectId = property("release.curseforge") as String
+            client = true
+            server = true
 
             minecraftVersionRange {
                 start = startMcVersion
