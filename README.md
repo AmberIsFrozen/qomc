@@ -23,7 +23,8 @@ This is good for singleplayer and client-side mods, but unhelpful for servers. Q
 
 After installation, QoMC will detect mods making use of Kaleido on startup, and auto generate a command for them.
 
-By default, the command is `/<Mod ID>_config`, e.g. `/qomc_config`.
+By default, the command is `/<Mod ID>_config`, e.g. `/qomc_config`.  
+For client-side config, the `_client` suffix will be used, e.g. `/qomc_config_client`. You can use this in multiplayer servers.
 
 For mods with multiple config files, QoMC will split the commands by config, e.g. `/qomc_config demo` and `/qomc_config main`.
 

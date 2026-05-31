@@ -1,2 +1,3 @@
-- Add support for Forge 1.20.1
-- Fix NeoForge 1.21 crashing on dedicated server
+- Fix Fabric 1.20.1 enforcing an incorrect Java version
+- Added support for **client** config. Any config with "client" as their name will get registered in the client-side only. Allowing for usage across multiplayer servers.
+  - The client commands are registered with the `_client` suffix to prevent collision with the main command.
